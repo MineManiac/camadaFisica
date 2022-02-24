@@ -13,6 +13,30 @@
 from enlace import *
 import time
 import numpy as np
+from random import randint
+
+comando_1 = b'\x00\xFF\x00\xFF'
+comando_2 = b'\x00\xFF\xFF\x00'
+comando_3 = b'\xFF'
+comando_4 = b'\x00'
+comando_5 = b'\xFF\x00'
+comando_6 = b'\x00\xFF'
+
+lista_bytes = [comando_1,comando_2,comando_3,comando_4,comando_5,comando_6]
+
+# Funções para sortear um número de bytes que serão enviados
+def numero_de_comandos():
+    n = randint(10,30)
+    return n
+
+# Função que cria uma lista com N comandos e adicionados de forma aleatória
+def cria_lista_comandos(n):
+    lista_envio = []
+    for i in range(n):
+        j = randint(0,5)
+        lista_envio.append(lista_bytes[j])
+    
+    return lista_envio
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
