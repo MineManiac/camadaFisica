@@ -9,7 +9,6 @@
 #esta é a camada superior, de aplicação do seu software de comunicação serial UART.
 #para acompanhar a execução e identificar erros, construa prints ao longo do código! 
 
-
 from enlace import *
 import time
 import numpy as np
