@@ -22,7 +22,7 @@ import numpy as np
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM3"                  # Windows(variacao de)
+serialName = "COM5"                  # Windows(variacao de)
 
 
 def main():
@@ -30,7 +30,7 @@ def main():
         
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM3')
+        com1 = enlace('COM5')
         
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
@@ -44,13 +44,20 @@ def main():
         print("A Recepção vai comecar")
         print("-"*30)
         # Nesse momento, desejamos receber apenas um byte, que é o handshake.
-        rxBuffer = com1.getData(1)
+        
+        rxBuffer,_ = com1.getData(1)
+        print("o que recebeu {}".format(rxBuffer))
         # Número recebido pelo rxBuffer, que é o tamanho da próxima mensagem que receberemos
         tamanho_mensagem = int.from_bytes(rxBuffer, byteorder='big')
+        print("Quantos comandos tem a próxima mensagem {}".format(tamanho_mensagem))
         
-        rxBuffer = com1.getData(tamanho_mensagem)
+        rxBuffer,_ = com1.getData(tamanho_mensagem)
+        print("mensagemLida {}".format(rxBuffer))
         sRxBuffer = str(rxBuffer)
+        print("stringBuffer {}".format(sRxBuffer))
         quant_comandos_recebidos = len(sRxBuffer.split("\\x05")) - 1
+        quant_comandos_recebidos += 1
+        print("quantidade de comandos recebidos {}".format(quant_comandos_recebidos))
 
         #acesso aos bytes recebidos
        
