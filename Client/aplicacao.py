@@ -46,14 +46,14 @@ def cria_lista_comandos(n):
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM4"                  # Windows(variacao de)
+serialName = "COM3"                  # Windows(variacao de)
 
 
 def main():
     try:
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM4')
+        com1 = enlace('COM3')
         
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
@@ -71,12 +71,13 @@ def main():
         # Estamos usando o valor 5 em hexadecimal para representar quando um novo comando começa
         protocolo = b'\x05' 
         quant = quantidade_de_comandos()
-        lista_comandos = cria_lista_comandos(n)
+        lista_comandos = cria_lista_comandos(quant)
         for c in lista_comandos:
             n_bytes_comando = bytes([len(c)])
             # Envia mensagem composta por: PROTOCOLO + Número de bytes no comando em seguida + Comando
             txBuffer += protocolo + n_bytes_comando + c
-            
+        
+        print("txBuffer = {}".format(txBuffer))
         #finalmente vamos transmitir os dados. Para isso usamos a funçao sendData que é um método da camada enlace.
         #faça um print para avisar que a transmissão vai começar.
         #tente entender como o método send funciona!
@@ -88,11 +89,13 @@ def main():
         print("Transmitindo handshake")
         # Nosso handshake será um array com 1 byte referente ao tamanho do próximo array a ser enviado
         txBufferLen = bytes([len(txBuffer)])
+        print("txBufferLen = {}".format(txBufferLen))
         com1.sendData(np.asarray(txBufferLen)) 
         print("-"*30)
         # Faz uma pausa para deixar o outro computador receber 
-        time.sleep(2)
+        time.sleep(5)
         print("Transmitindo mensagem")
+        print("-"*30)
         # Transmitindo a mensagem que desejamos
         com1.sendData(np.asarray(txBuffer))
         
@@ -103,11 +106,14 @@ def main():
         #acesso aos bytes recebidos
         rxBuffer, nRx = com1.getData(1)
         
-        print("recebeu RxBuffer")
+        print("Recebeu RxBuffer")
         print("-"*30)
         
         # Transformando byte recebido no rxBuffer para int
-        n_rxbuffer = int.from_bytes(rxBuffer, byteorder='big')
+        n_rxBuffer = int.from_bytes(rxBuffer, byteorder='big')
+        print("rxBuffer = {}".format(rxBuffer))
+        print("n_rxBuffer = {}".format(n_rxBuffer))
+        print("quant = {}".format(quant))
         
         if n_rxBuffer == quant:
             print("Sucesso! O servidor recebeu os comandos enviados")
