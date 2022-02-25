@@ -64,9 +64,7 @@ def main():
         #aqui você deverá gerar os dados a serem transmitidos. 
         #seus dados a serem transmitidos são uma lista de bytes a serem transmitidos. Gere esta lista com o 
         #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
-        
         print("Carregando comandos para transmissão:")
-        #print(" - {}".format(imageR))
         print("-"*30)
         
         txBuffer = b''
@@ -84,41 +82,37 @@ def main():
         #tente entender como o método send funciona!
         #Cuidado! Apenas trasmitimos arrays de bytes! Nao listas!
           
-        print("A transmissao vai comecar")
-        com1.sendData(np.asarray(txBuffer))        
-        print("-"*30)
-       
-        print("A Recepção vai comecar")
+        print("A transmissao vai comecar")   
         print("-"*30)
         
+        print("Transmitindo handshake")
+        # Nosso handshake será um array com 1 byte referente ao tamanho do próximo array a ser enviado
+        txBufferLen = bytes([len(txBuffer)])
+        com1.sendData(np.asarray(txBufferLen)) 
+        print("-"*30)
+        # Faz uma pausa para deixar o outro computador receber 
+        time.sleep(2)
+        print("Transmitindo mensagem")
+        # Transmitindo a mensagem que desejamos
+        com1.sendData(np.asarray(txBuffer))
+        
+        
+        
+        print("A Recepção vai comecar")
+        print("-"*30)
         #acesso aos bytes recebidos
         rxBuffer, nRx = com1.getData(1)
         
         print("recebeu RxBuffer")
         print("-"*30)
-        print("Salvando dados no arquivo :")
-        print(" - {}".format(imageW))
-        f = open(imageW, "wb")
-        f.write(rxBuffer)
-        f.close()
         
+        # Transformando byte recebido no rxBuffer para int
+        n_rxbuffer = int.from_bytes(rxBuffer, byteorder='big')
         
-        
-        rxLen = len(rxBuffer)
-        #print(rxLen)
-        #print(txLen)
-        
-        if txLen == rxLen:
-            print("Todos os bytes estão guardados corretamente")
-            print("-"*30)
-        
-        if txLen != rxLen:
-            print("Todos os bytes nao estão guardados corretamente")
-            print("-"*30)
-        
-        print("---TEMPO DE RECEPCAO %s seconds ---" % (end_time - start_time))
-        
-    
+        if n_rxBuffer == quant:
+            print("Sucesso! O servidor recebeu os comandos enviados")
+        else:
+            print("Falhou")
         # Encerra comunicação
         print("-------------------------")
         print("Comunicação encerrada")

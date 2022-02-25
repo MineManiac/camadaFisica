@@ -37,37 +37,27 @@ def main():
         com1.enable()
         #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
         print(com1)
-        
-        #aqui você deverá gerar os dados a serem transmitidos. 
-        #seus dados a serem transmitidos são uma lista de bytes a serem transmitidos. Gere esta lista com o 
-        #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
-        
-        print("A Recepção vai comecar")
-        print("-"*30)
-        
-        rxBuffer = com1.getData()
-        sRxBuffer = string(rxBuffer)
-        quant_comandos = len(sRxBuffer.split("\\x05")) - 1
-                             
+                
         #Agora vamos iniciar a recepção dos dados. Se algo chegou ao RX, deve estar automaticamente guardado
         #Observe o que faz a rotina dentro do thread RX
         #print um aviso de que a recepção vai começar.
-       
+        print("A Recepção vai comecar")
+        print("-"*30)
+        # Nesse momento, desejamos receber apenas um byte, que é o handshake.
+        rxBuffer = com1.getData(1)
+        # Número recebido pelo rxBuffer, que é o tamanho da próxima mensagem que receberemos
+        tamanho_mensagem = int.from_bytes(rxBuffer, byteorder='big')
         
-        
-        #Será que todos os bytes enviados estão realmente guardadas? Será que conseguimos verificar?
-        #Veja o que faz a funcao do enlaceRX  getBufferLen
-       
-        
+        rxBuffer = com1.getData(tamanho_mensagem)
+        sRxBuffer = str(rxBuffer)
+        quant_comandos_recebidos = len(sRxBuffer.split("\\x05")) - 1
+
         #acesso aos bytes recebidos
-       
-        
-        #rxBuffer, nRx = com1.getData(txLen)
        
         print("Carregando a quantidade de Bytes recebida para transmissão:")
         print("-"*30)
         
-        txBuffer = quant_comandos
+        txBuffer = quant_comandos_recebidos
          
         print("A transmissao vai comecar")
         #txBuffer = #dados
