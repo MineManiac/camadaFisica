@@ -78,6 +78,7 @@ def main():
             txBuffer += protocolo + n_bytes_comando + c
         
         print("txBuffer = {}".format(txBuffer))
+        print("txBufferLen = {}".format(len(txBuffer)))
         #finalmente vamos transmitir os dados. Para isso usamos a funçao sendData que é um método da camada enlace.
         #faça um print para avisar que a transmissão vai começar.
         #tente entender como o método send funciona!
@@ -85,6 +86,7 @@ def main():
           
         print("A transmissao vai comecar")   
         print("-"*30)
+        time.sleep(3)
         
         print("Transmitindo handshake")
         # Nosso handshake será um array com 1 byte referente ao tamanho do próximo array a ser enviado
@@ -93,7 +95,7 @@ def main():
         com1.sendData(np.asarray(txBufferLen)) 
         print("-"*30)
         # Faz uma pausa para deixar o outro computador receber 
-        time.sleep(5)
+        time.sleep(7)
         print("Transmitindo mensagem")
         print("-"*30)
         # Transmitindo a mensagem que desejamos
