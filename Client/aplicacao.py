@@ -69,48 +69,30 @@ def main():
         #print(" - {}".format(imageR))
         print("-"*30)
         
-        #txBuffer = imagem em bytes!
         txBuffer = b''
-        protocolo = b'\x05' # Estamos usando o valor 5 em hexadecimal para representar quando um novo comando começa
+        # Estamos usando o valor 5 em hexadecimal para representar quando um novo comando começa
+        protocolo = b'\x05' 
         quant = quantidade_de_comandos()
         lista_comandos = cria_lista_comandos(n)
         for c in lista_comandos:
             n_bytes_comando = bytes([len(c)])
             # Envia mensagem composta por: PROTOCOLO + Número de bytes no comando em seguida + Comando
             txBuffer += protocolo + n_bytes_comando + c
-        
-        #faça aqui uma conferência do tamanho do seu txBuffer, ou seja, quantos bytes serão enviados.
             
         #finalmente vamos transmitir os dados. Para isso usamos a funçao sendData que é um método da camada enlace.
         #faça um print para avisar que a transmissão vai começar.
         #tente entender como o método send funciona!
         #Cuidado! Apenas trasmitimos arrays de bytes! Nao listas!
           
-          
         print("A transmissao vai comecar")
         com1.sendData(np.asarray(txBuffer))        
         print("-"*30)
        
-        # A camada enlace possui uma camada inferior, TX possui um método para conhecermos o status da transmissão
-        # Tente entender como esse método funciona e o que ele retorna
-        txSize = com1.tx.getStatus()
-        #Agora vamos iniciar a recepção dos dados. Se algo chegou ao RX, deve estar automaticamente guardado
-        #Observe o que faz a rotina dentro do thread RX
-        #print um aviso de que a recepção vai começar.
         print("A Recepção vai comecar")
         print("-"*30)
         
-        
-        #Será que todos os bytes enviados estão realmente guardadas? Será que conseguimos verificar?
-        #Veja o que faz a funcao do enlaceRX  getBufferLen
-       
-        
         #acesso aos bytes recebidos
-       
-        txLen = len(txBuffer)
-        start_time = time.time()
-        rxBuffer, nRx = com1.getData(txLen)
-        end_time = time.time()
+        rxBuffer, nRx = com1.getData(1)
         
         print("recebeu RxBuffer")
         print("-"*30)

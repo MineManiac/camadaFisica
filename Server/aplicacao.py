@@ -42,27 +42,17 @@ def main():
         #seus dados a serem transmitidos são uma lista de bytes a serem transmitidos. Gere esta lista com o 
         #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
         
-        
+        print("A Recepção vai comecar")
+        print("-"*30)
         
         rxBuffer = com1.getData()
-        protocolo = b'\x0A'
-        bytesRecebido = 
-        
         sRxBuffer = string(rxBuffer)
-        quant_comandos = len(sRxBuffer.split("\\x05") - 1
+        quant_comandos = len(sRxBuffer.split("\\x05")) - 1
                              
-        
-        
-        
-       
-        # A camada enlace possui uma camada inferior, TX possui um método para conhecermos o status da transmissão
-        # Tente entender como esse método funciona e o que ele retorna
-        txSize = com1.tx.getStatus()
         #Agora vamos iniciar a recepção dos dados. Se algo chegou ao RX, deve estar automaticamente guardado
         #Observe o que faz a rotina dentro do thread RX
         #print um aviso de que a recepção vai começar.
-        print("A Recepção vai comecar")
-        print("-"*30)
+       
         
         
         #Será que todos os bytes enviados estão realmente guardadas? Será que conseguimos verificar?
@@ -71,58 +61,18 @@ def main():
         
         #acesso aos bytes recebidos
        
-        txLen = len(txBuffer)
         
-        start_time = time.time()
-        rxBuffer, nRx = com1.getData(txLen)
-        end_time = time.time()
-        
-        print("recebeu RxBuffer, {} Bytes".format(txLen))
-        print("-"*30)
-        print("Salvando dados")
-        f = open(imageW, "wb")
-        f.write(rxBuffer)
-        f.close()
-        
-        
-        
-        rxLen = len(rxBuffer)
-        #print(rxLen)
-        #print(txLen)
-        
-        if txLen == rxLen:
-            print("Todos os bytes estão guardados corretamente")
-            print("-"*30)
-        
-        if txLen != rxLen:
-            print("Todos os bytes nao estão guardados corretamente")
-            print("-"*30)
-        
-        print("---TEMPO DE RECEPCAO %s seconds ---" % (end_time - start_time))
-        
-        
+        #rxBuffer, nRx = com1.getData(txLen)
+       
         print("Carregando a quantidade de Bytes recebida para transmissão:")
         print("-"*30)
         
-        #txBuffer = imagem em bytes!
-        txBuffer = len(rxBuffer)
-    
-    
-        #faça aqui uma conferência do tamanho do seu txBuffer, ou seja, quantos bytes serão enviados.
-            
-        #finalmente vamos transmitir os tados. Para isso usamos a funçao sendData que é um método da camada enlace.
-        #faça um print para avisar que a transmissão vai começar.
-        #tente entender como o método send funciona!
-        #Cuidado! Apenas trasmitimos arrays de bytes! Nao listas!
-          
-          
+        txBuffer = quant_comandos
+         
         print("A transmissao vai comecar")
         #txBuffer = #dados
-        start_time = time.perf_counter()
+        txBuffer = bytes([txBuffer])
         com1.sendData(np.asarray(txBuffer))
-        end_time = time.perf_counter()
-        
-        print("---TEMPO DE TRANSMISSAO %s seconds ---" % (end_time - start_time))
         
         print("-"*30)
     
