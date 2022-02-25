@@ -25,7 +25,7 @@ comando_6 = b'\x00\xFF'
 lista_bytes = [comando_1,comando_2,comando_3,comando_4,comando_5,comando_6]
 
 # Funções para sortear um número de bytes que serão enviados
-def numero_de_comandos():
+def quantidade_de_comandos():
     n = randint(10,30)
     return n
 
@@ -65,35 +65,30 @@ def main():
         #seus dados a serem transmitidos são uma lista de bytes a serem transmitidos. Gere esta lista com o 
         #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
         
-        #path das imagens
-        imageR = "imgs/naorickroll.jpg"
-        imageW = "imgs/naorickrollcopia.jpg"
-        
-        print("Carregando imagem para transmissão:")
-        print(" - {}".format(imageR))
+        print("Carregando comandos para transmissão:")
+        #print(" - {}".format(imageR))
         print("-"*30)
         
         #txBuffer = imagem em bytes!
-        txBuffer = open(imageR, 'rb').read()
+        txBuffer = b''
+        protocolo = b'\x05' # Estamos usando o valor 5 em hexadecimal para representar quando um novo comando começa
+        quant = quantidade_de_comandos()
+        lista_comandos = cria_lista_comandos(n)
+        for c in lista_comandos:
+            n_bytes_comando = bytes([len(c)])
+            # Envia mensagem composta por: PROTOCOLO + Número de bytes no comando em seguida + Comando
+            txBuffer += protocolo + n_bytes_comando + c
         
-       
-    
-    
         #faça aqui uma conferência do tamanho do seu txBuffer, ou seja, quantos bytes serão enviados.
             
-        #finalmente vamos transmitir os tados. Para isso usamos a funçao sendData que é um método da camada enlace.
+        #finalmente vamos transmitir os dados. Para isso usamos a funçao sendData que é um método da camada enlace.
         #faça um print para avisar que a transmissão vai começar.
         #tente entender como o método send funciona!
         #Cuidado! Apenas trasmitimos arrays de bytes! Nao listas!
           
           
         print("A transmissao vai comecar")
-        #txBuffer = #dados
-        start_time = time.perf_counter()
-        com1.sendData(np.asarray(txBuffer))
-        end_time = time.perf_counter()
-        print("---TEMPO DE TRANSMISSAO %s seconds ---" % (end_time - start_time))
-        
+        com1.sendData(np.asarray(txBuffer))        
         print("-"*30)
        
         # A camada enlace possui uma camada inferior, TX possui um método para conhecermos o status da transmissão
