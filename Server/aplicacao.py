@@ -56,7 +56,7 @@ def main():
         #print("mensagemLida {}".format(rxBuffer))
         sRxBuffer = str(rxBuffer)
         #print("stringBuffer {}".format(sRxBuffer))
-        quant_comandos_recebidos = len(sRxBuffer.split("\\x05"))-1
+        quant_comandos_recebidos = len(sRxBuffer.split("\\x05"))- 1
 
         print("quantidade de comandos recebidos {}".format(quant_comandos_recebidos))
 
