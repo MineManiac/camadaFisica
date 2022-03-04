@@ -22,14 +22,35 @@ import numpy as np
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM4"                  # Windows(variacao de)
+serialName = "COM3"                  # Windows(variacao de)
 
+def datagram_head(n_pacote, total, size_proximo):
+    
+    head = n_pacote.to_bytes(2, byteorder='big') + total.to_bytes(2, byteorder='big') + size_proximo.to_bytes(1, byteorder='big') + (7 * bytes([0]))
+    lista = []
+    
+    for b in head:
+        lista.append(b)
+    
+    n_pacote_dec = lista[:2]
+    total_dec = lista[3:4]
+    size_proximo_dec = lista[4]
+    
+    print(n_pacote_dec)
+    print(total_dec)
+    print(size_proximo_dec)
+    
+    
+    #decifrado = [int.from_bytes(b, byteorder='big') 
+        
+        
+    return head 
 
 def main():
     try:
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM4')
+        com1 = enlace('COM3')
         
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
@@ -41,12 +62,51 @@ def main():
         #seus dados a serem transmitidos são uma lista de bytes a serem transmitidos. Gere esta lista com o 
         #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
         print("-"*30)
-        print("Carregando comandos para transmissão:")
+        print("Carregando dados para transmissão:")
         print("-"*30)
         
         txBuffer = b''
-        # Estamos usando o valor 5 em hexadecimal para representar quando um novo comando começa
-        protocolo = b'\x05' 
+        
+        imageR = "img/naorickroll.jpg"
+        with open(imageR, 'rb') as file:
+            img_bytes = file.read()
+        img_bytes_list = []
+        for b in img_bytes:
+            img_bytes_list.append(b)
+            
+        img_bytes_len = len(img_bytes_list)
+        
+        l, r = divmod(img_bytes_len, 114)
+        
+        print(l, r)
+        
+   #Handshake
+        
+        
+        # HEAD - 10 bytes
+        #número do pacote 
+        #número total de pacotes que serão transmitidos.
+        #tamanho do pacote seguinte a ser transmitido
+        
+        # Quantidade de bytes do payload
+        
+        # EOP - 4 bytes
+        
+        print(datagram_head(10, 373, 114))
+ 
+        
+         
+            
+            
+            # PAYLOAD - de 0 a 114 bytes        
+            
+            
+            #fatiada = byte_list[:x]
+            #fatiada_bytes = [bytes([b]) for b in fatiada]
+            
+            
+        
+        
         quant = quantidade_de_comandos()
         lista_comandos = cria_lista_comandos(quant)
         for c in lista_comandos:
