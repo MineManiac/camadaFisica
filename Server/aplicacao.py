@@ -25,6 +25,28 @@ import numpy as np
 serialName = "COM3"                  # Windows(variacao de)
 
 
+def decifra_head(head):
+    lista = []
+    
+    for b in head:
+        lista.append(b)
+    
+    n_pacote = lista[:2]
+    total_pacotes = lista[2:4]
+    tamanho_payload = lista[4:5]
+    
+    decifrado_n_pacote = int.from_bytes(n_pacote, byteorder='big')
+    decifrado_total_pacotes = int.from_bytes(total_pacotes, byteorder='big')
+    decifrado_tamanho_payload = int.from_bytes(tamanho_payload, byteorder='big')
+    
+    
+    
+    print('{} NUMERO PACOTE / {} TOTAL DE PACOTES'.format(decifrado_n_pacote, decifrado_total_pacotes))
+    print('----------------')
+    print('Bytes do Payload {}'.format(decifrado_tamanho_payload))
+    
+    return(decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes)
+
 def main():
     try:
         
@@ -46,7 +68,29 @@ def main():
         print("-"*30)
         # Nesse momento, desejamos receber apenas um byte, que é o handshake.
         
-        rxBuffer,_ = com1.getData(1)
+        handshake_rxBuffer,_ = com1.getData(14)
+        
+        decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes = decifra_head(handshake_rxBuffer)
+        
+        resposta = input('Mandar resposta? S/N    ')
+        
+        if resposta.lower() == "s":
+            
+            head = bytes([0]) * 10
+            eop = bytes([0]) * 4
+            
+            handshake_txBuffer = head + eop
+            com1.sendData(handshake_txBuffer)
+            
+            
+        else:
+            print("resposta não enviada")
+        
+        
+        
+        #print(decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes)
+        
+        
         print("o que recebeu {}".format(rxBuffer))
         # Número recebido pelo rxBuffer, que é o tamanho da próxima mensagem que receberemos
         tamanho_mensagem = int.from_bytes(rxBuffer, byteorder='big')
