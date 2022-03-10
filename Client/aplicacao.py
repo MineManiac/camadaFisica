@@ -22,35 +22,25 @@ import numpy as np
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM3"                  # Windows(variacao de)
+serialName = "COM4"                  # Windows(variacao de)
 
-def datagram_head(n_pacote, total, size_proximo):
+def datagram_head(n_pacote, total_pacotes, tamanho_payload):
     
-    head = n_pacote.to_bytes(2, byteorder='big') + total.to_bytes(2, byteorder='big') + size_proximo.to_bytes(1, byteorder='big') + (7 * bytes([0]))
-    lista = []
-    
-    for b in head:
-        lista.append(b)
-    
-    n_pacote_dec = lista[:2]
-    total_dec = lista[3:4]
-    size_proximo_dec = lista[4]
-    
-    print(n_pacote_dec)
-    print(total_dec)
-    print(size_proximo_dec)
-    
-    
-    #decifrado = [int.from_bytes(b, byteorder='big') 
-        
-        
+    head = n_pacote.to_bytes(2, byteorder='big') + total_pacotes.to_bytes(2, byteorder='big') + tamanho_payload.to_bytes(2, byteorder='big') + (6 * bytes([0]))
+   
     return head 
 
+def datagram_eop():
+    
+    eop = (4 * bytes([11]))
+    
+    return eop
+    
 def main():
     try:
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM3')
+        com1 = enlace('COM4')
         
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
@@ -80,7 +70,37 @@ def main():
         
         print(l, r)
         
-   #Handshake
+        if r > 0:
+            total_pacotes = l+1
+        
+        # Handshake
+        # Primeiro o Client manda um handshake para saber se o Server está online
+        
+        handshake_head = datagram_head(0, total_pacotes, 110)
+        handshake_eop = datagram_eop()
+        
+        handshake_txBuffer = handshake_head + handshake_eop
+        
+        
+        com1.sendData(handshake_txBuffer)
+        
+        # Agora o Client espera uma resposta do Server por 5 segundos
+        tentando = True
+        while tentando:
+            handshake_rxBuffer = com1.getData(14)
+            
+            if handshake_rxBuffer == False:
+                tentando = handshake_rxBuffer
+                print("Encerrando comunicação")
+                com1.disable()
+                
+            elif handshake_rxBuffer == True:
+                com1.sendData(handshake_txBuffer)
+                
+            else:
+                tentando = False
+                
+              
         
         
         # HEAD - 10 bytes
@@ -92,7 +112,6 @@ def main():
         
         # EOP - 4 bytes
         
-        print(datagram_head(10, 373, 114))
  
         
          

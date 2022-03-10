@@ -76,10 +76,14 @@ class RX(object):
             final = time.perf_counter()
             timer = final - inicial
             
-            if timer >= 10:
+            if timer >= 5:
                 print("Tempo decorrido = {}".format(timer))
                 print("-"*30)
-                return b''
+                resposta = input("Servidor inativo. Tentar novamente? S/N  ")
+                if resposta.lower() == "s":
+                    return True
+                else:
+                    return False
                           
         return(self.getBuffer(size))
 
