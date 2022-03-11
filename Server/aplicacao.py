@@ -12,6 +12,7 @@
 from enlace import *
 import time
 import numpy as np
+import sys
 
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
@@ -22,7 +23,7 @@ import numpy as np
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM3"                  # Windows(variacao de)
+serialName = "COM5"                  # Windows(variacao de)
 
 
 def decifra_head(head):
@@ -41,18 +42,20 @@ def decifra_head(head):
     
     
     
-    print('{} NUMERO PACOTE / {} TOTAL DE PACOTES'.format(decifrado_n_pacote, decifrado_total_pacotes))
-    print('----------------')
-    print('Bytes do Payload {}'.format(decifrado_tamanho_payload))
+    #print('{} NUMERO PACOTE / {} TOTAL DE PACOTES'.format(decifrado_n_pacote, decifrado_total_pacotes))
+    #print('----------------')
+    #print('Bytes do Payload {}'.format(decifrado_tamanho_payload))
     
     return(decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes)
+    
+    
 
 def main():
     try:
         
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM3')
+        com1 = enlace('COM5')
         
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
@@ -61,67 +64,106 @@ def main():
         #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
         print(com1)
                 
-        #Agora vamos iniciar a recepção dos dados. Se algo chegou ao RX, deve estar automaticamente guardado
-        #Observe o que faz a rotina dentro do thread RX
-        #print um aviso de que a recepção vai começar.
-        print("A Recepção vai comecar")
+        
+        print("A Recepção do Handshake vai comecar")
         print("-"*30)
-        # Nesse momento, desejamos receber apenas um byte, que é o handshake.
         
-        handshake_rxBuffer,_ = com1.getData(14)
+        #time.sleep(30)
         
-        decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes = decifra_head(handshake_rxBuffer)
+        # Recebe Handshake do cliente
+        handshake_rxBuffer_head,_ = com1.getData(10)
+        print(handshake_rxBuffer_head)
         
-        resposta = input('Mandar resposta? S/N    ')
+        # Decifra o head para saber se é handshake ou n
+        decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes = decifra_head(handshake_rxBuffer_head)
         
-        if resposta.lower() == "s":
-            
-            head = bytes([0]) * 10
-            eop = bytes([0]) * 4
-            
-            handshake_txBuffer = head + eop
-            com1.sendData(handshake_txBuffer)
-            
-            
+        # Tamanho do payload, ja que no handshake o valor é 0, não precisa de get data
+        handshake_rxBuffer_payload = decifrado_tamanho_payload
+        
+        #EOP do handshake
+        handshake_rxBuffer_eop = com1.getData(4)
+        
+        if handshake_rxBuffer_payload == 0:
+            #Resposta para o cliente, enviando Head 10 bytes, Payload 0 bytes, EOP 4 bytes
+             print("A transmissao Handshake vai comecar vai comecar")
+             print("-"*30)
+             head = bytes([0]) * 10
+             
+             com1.sendData(head)
+             time.sleep(.01)
+             
+             eop = bytes([0]) * 4
+             com1.sendData(eop)
+             time.sleep(.01)
+             
+             
         else:
-            print("resposta não enviada")
+            com1.disable()
+            sys.exit()
         
         
+        #Pós HANDSHAKE
         
-        #print(decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes)
+        #RICKROLL EM BYTES
+        imagem_recebida = b''
         
-        
-        print("o que recebeu {}".format(rxBuffer))
-        # Número recebido pelo rxBuffer, que é o tamanho da próxima mensagem que receberemos
-        tamanho_mensagem = int.from_bytes(rxBuffer, byteorder='big')
-        print("Quantos bytes tem a próxima mensagem {}".format(tamanho_mensagem))
-        
-        rxBuffer,_ = com1.getData(tamanho_mensagem)
-        #print("mensagemLida {}".format(rxBuffer))
-        sRxBuffer = str(rxBuffer)
-        #print("stringBuffer {}".format(sRxBuffer))
-        quant_comandos_recebidos = len(sRxBuffer.split("\\x05"))- 1
-
-        print("quantidade de comandos recebidos {}".format(quant_comandos_recebidos))
-
-        #acesso aos bytes recebidos
-       
-        print("Carregando a quantidade de Bytes recebida para transmissão:")
+        print("A Recepção do Arquivo vai comecar")
         print("-"*30)
         
-        txBuffer = quant_comandos_recebidos
-         
-        print("A transmissao vai comecar")
-        #txBuffer = #dados
-        txBuffer = bytes([txBuffer])
+        #LOOP PEGANDO OS DADOS RECEBIDOS
+        while decifrado_n_pacote < decifrado_total_pacotes:
+            
+            rx_buffer_head = com1.getData(10)
+            
+            n_pacote_anterior = decifrado_n_pacote
+            print("pacote anterior {}".format(n_pacote_anterior))
+            
+            decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes = decifra_head(handshake_rxBuffer_head)
+            print("pacote de agora {}".format(decifrado_n_pacote))
+            #caso o envio do pacote seja fora de ordem
+            if (n_pacote_anterior != (decifrado_n_pacote)):
+                print("ERRO!!! ENVIO DO PACOTE ESTÁ  FORA DE ORDEM - ENCERRANDO COMUNICACAO")
+                print("-"*30)
+                com1.disable()
+                sys.exit()
+                
+            rx_buffer_payload, size_payload = com1.getData(decifrado_tamanho_payload)
+            
+            # Caso o tamanho do payload do head for diferente do payload recebido
+            if size_payload != decifrado_tamanho_payload:
+                print("ERRO!!! ENVIO O TAMANHO DO PAYLOAD RECEBIDO ESTÁ DIFERENTE DO QUE FOI MANDADO NO HEAD")
+                print("-"*30)
+                com1.disable()
+                sys.exit()
+            
+            #concatenando bytes do payload para a imagem
+            imagem_recebida += rx_buffer_payload
+                
+            
+            rx_buffer_eop, _ = com1.getData(4)
+            eop_desejado = bytes([11]) * 4
+            
+            '''# Observação do EOP para ver se é o mesmo do esperado, fixo 4 bytes do numero 11
+            if rx_buffer_eop == eop_desejado:
+                pass
+            else:
+                print("ERRO!!! EOP ESTÁ INCORRETO")
+                print("-"*30)
+                com1.disable()
+                sys.exit() '''
+            
+            print("NUMERO PACOTE {} / TOTAL DE PACOTE {}".format(decifrado_n_pacote, decifrado_total_pacotes))
+            print("-"*30)
+            
+            #Quando chegar no ultimo pacote sai do while                     
+            if decifrado_n_pacote >= decifrado_total_pacotes:
+                break
         
-        #print("conexao desligada - Teste timeout do cliente")
-        #com1.disable()
+        write_image = "imgs/naorickrollcopia.jpg"
+        f = open(write_image, "wb")
+        f.write(imagem_recebida)
+        f.close()
         
-        com1.sendData(np.asarray(txBuffer))
-        time.sleep(1)
-        
-        print("-"*30)
     
         # Encerra comunicação
         print("-------------------------")
