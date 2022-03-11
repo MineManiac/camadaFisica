@@ -13,6 +13,7 @@
 from enlace import *
 import time
 import numpy as np
+import sys
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
@@ -22,13 +23,21 @@ import numpy as np
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM4"                  # Windows(variacao de)
+serialName = "COM3"                  # Windows(variacao de)
 
 def datagram_head(n_pacote, total_pacotes, tamanho_payload):
     
     head = n_pacote.to_bytes(2, byteorder='big') + total_pacotes.to_bytes(2, byteorder='big') + tamanho_payload.to_bytes(2, byteorder='big') + (6 * bytes([0]))
    
     return head 
+
+def datagram_payload(lista_bytes_envio):
+    payload = b''
+    tamanho_payload = len(lista_bytes_envio)
+    for b in lista_bytes_envio:
+        payload += b.to_bytes(1, byteorder='big')
+        
+    return payload, tamanho_payload
 
 def datagram_eop():
     
@@ -40,7 +49,7 @@ def main():
     try:
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM4')
+        com1 = enlace('COM3')
         
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
@@ -55,84 +64,104 @@ def main():
         print("Carregando dados para transmissão:")
         print("-"*30)
         
-        txBuffer = b''
-        
         imageR = "img/naorickroll.jpg"
         with open(imageR, 'rb') as file:
             img_bytes = file.read()
-        img_bytes_list = []
+        img_bytes_lista = []
         for b in img_bytes:
-            img_bytes_list.append(b)
+            img_bytes_lista.append(b)
             
-        img_bytes_len = len(img_bytes_list)
+        img_bytes_len = len(img_bytes_lista)
         
-        l, r = divmod(img_bytes_len, 114)
+        quantidade, resto = divmod(img_bytes_len, 114)
         
-        print(l, r)
+        print(quantidade, resto)
         
-        if r > 0:
-            total_pacotes = l+1
-        
-        # Handshake
-        # Primeiro o Client manda um handshake para saber se o Server está online
-        
-        handshake_head = datagram_head(0, total_pacotes, 110)
-        handshake_eop = datagram_eop()
-        
-        handshake_txBuffer = handshake_head + handshake_eop
-        
-        
-        com1.sendData(handshake_txBuffer)
-        
-        # Agora o Client espera uma resposta do Server por 5 segundos
+        total_pacotes = quantidade
+        if resto > 0:
+            total_pacotes += 1
+                
         tentando = True
         while tentando:
-            handshake_rxBuffer = com1.getData(14)
+            print("entrou no loop")
+            print("-"*30)
+            # Handshake
+            # Primeiro o Client manda um handshake para saber se o Server está online
+            handshake_head = datagram_head(0, total_pacotes, 0)
+            handshake_eop = datagram_eop()
+            # Primeiro manda o head
+            handshake_head_txBuffer = handshake_head
+            com1.sendData(handshake_head_txBuffer)
+            time.sleep(0.01)
+            # Depois manda o eop
+            handshake_eop_txBuffer = handshake_eop
+            com1.sendData(handshake_eop_txBuffer)
+            time.sleep(0.01)
             
-            if handshake_rxBuffer == False:
-                tentando = handshake_rxBuffer
-                print("Encerrando comunicação")
-                com1.disable()
-                
-            elif handshake_rxBuffer == True:
-                com1.sendData(handshake_txBuffer)
-                
+            # Agora o Client espera uma resposta do Server por 5 segundos
+            handshake_rxBuffer_head, nRx = com1.getData(10)            
+            
+            if nRx == 0:
+                resposta = input("Servidor inativo. Tentar novamente? S/N  ")
+                print("-"*30)
+                if resposta.lower() == 's':
+                    pass
+                else:    
+                    print("Encerrando comunicação")
+                    com1.disable()
+                    sys.exit()
             else:
-                tentando = False
+                tentando = False          
+                handshake_rxBuffer_eop, nRx = com1.getData(4)
                 
-              
         
-        
-        # HEAD - 10 bytes
-        #número do pacote 
-        #número total de pacotes que serão transmitidos.
-        #tamanho do pacote seguinte a ser transmitido
-        
-        # Quantidade de bytes do payload
-        
-        # EOP - 4 bytes
-        
- 
-        
-         
+        n_pacote = 1
+        i_lista_inicial = 0
+        while n_pacote <= total_pacotes:  
+            print("entrou no segundo loop")
+            # PAYLOAD - de 0 a 114 bytes
+            if n_pacote < total_pacotes:
+                tamanho_payload = 114
+            elif n_pacote == total_pacotes:
+                tamanho_payload = resto+1
             
+            i_lista_final = i_lista_inicial + tamanho_payload
+            lista_bytes_envio = img_bytes_lista[i_lista_inicial:i_lista_final]
+            i_lista_inicial = i_lista_final
             
-            # PAYLOAD - de 0 a 114 bytes        
+            payload, tamanho_payload = datagram_payload(lista_bytes_envio)
+                
+            # HEAD - 10 bytes
+            # Número do pacote 
+            # Número total de pacotes que serão transmitidos
+            # Tamanho do Payload desse pacote
             
+            head = datagram_head(n_pacote, total_pacotes, tamanho_payload)
+
+            # EOP - 4 bytes
             
-            #fatiada = byte_list[:x]
-            #fatiada_bytes = [bytes([b]) for b in fatiada]
+            eop = datagram_eop()
             
+            # Criação do pacote que vai ser enviado
+            print("manda head")
+            txBuffer_head = head
+            com1.sendData(txBuffer_head)
+            time.sleep(.01)
             
+            print("manda payload")
+            txBuffer_payload = payload
+            com1.sendData(txBuffer_payload)
+            time.sleep(.01)
+            
+            print("manda eop")
+            txBuffer_eop = eop
+            com1.sendData(txBuffer_eop)
+            time.sleep(.01)
+            
+            n_pacote += 1
         
         
-        quant = quantidade_de_comandos()
-        lista_comandos = cria_lista_comandos(quant)
-        for c in lista_comandos:
-            n_bytes_comando = bytes([len(c)])
-            # Envia mensagem composta por: PROTOCOLO + Número de bytes no comando em seguida + Comando
-            txBuffer += protocolo + n_bytes_comando + c
-        
+        """
         #print("txBuffer = {}".format(txBuffer))
         print("txBufferLen = {}".format(len(txBuffer)))
         print("-"*30)
@@ -187,10 +216,12 @@ def main():
             else:
                 print("Falhou")
                 print("-"*30)
-            # Encerra comunicação
-            print("Comunicação encerrada")
-            print("-"*30)
-            com1.disable()
+                
+            """
+        # Encerra comunicação
+        print("Comunicação encerrada")
+        print("-"*30)
+        com1.disable()
         
     except Exception as erro:
         print("ops! :-\\")
