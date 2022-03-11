@@ -119,6 +119,7 @@ def main():
         i_lista_inicial = 0
         while n_pacote <= total_pacotes:  
             print("entrou no segundo loop")
+            print(n_pacote)
             # PAYLOAD - de 0 a 114 bytes
             if n_pacote < total_pacotes:
                 tamanho_payload = 114
