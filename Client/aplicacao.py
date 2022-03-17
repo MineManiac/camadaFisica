@@ -44,6 +44,18 @@ def datagram_eop():
     eop = (4 * bytes([11]))
     
     return eop
+
+def decifra_head(head):
+    lista = []
+    
+    for b in head:
+        lista.append(b)
+    
+    tamanho_payload = lista[4:6]
+    
+    decifrado_tamanho_payload = int.from_bytes(tamanho_payload, byteorder='big')
+    
+    return(decifrado_tamanho_payload)
     
 def main():
     try:
@@ -111,7 +123,12 @@ def main():
             
             # Agora o Client espera uma resposta do Server por 5 segundos
             print("Esperando resposta do Server")
-            handshake_rxBuffer_head, nRx = com1.getData(10)            
+            print("-"*30)
+            
+            handshake_rxBuffer_head, nRx = com1.getData(10)   
+            print(f"Handshake Head recebido: {handshake_rxBuffer_head}")
+            print("-"*30)
+            
             
             if nRx == 0:
                 resposta = input("Servidor inativo. Tentar novamente? S/N  ")
@@ -124,7 +141,12 @@ def main():
                     sys.exit()
             else:
                 tentando = False          
+                
                 handshake_rxBuffer_eop, nRx = com1.getData(4)
+                time.sleep(.01)
+                print(f"Handshake EOP recebido: {handshake_rxBuffer_eop}")
+                print("-"*30)
+                
                 
         # Se deu tudo certo na conexão com o Server, a transmissão se inicia
         print("A transmissão vai começar")   
@@ -166,7 +188,7 @@ def main():
             print("Tranmitindo Head")
             print("-"*30)
             com1.sendData(txBuffer_head)
-            time.sleep(0.01)
+            time.sleep(0.1)
             
             print("Transmitindo Payload")
             print("-"*30)
@@ -179,14 +201,20 @@ def main():
             time.sleep(0.01)
             
             # Depois de mandar o pacote, o Client precisa receber um feedback do Server
+            
             rxBuffer_head, nRx_h = com1.getData(10)
             print("Head recebido")
             print("-"*30)
             time.sleep(0.01)
+            feedback_server = decifra_head(rxBuffer_head)
+            print(f"feedback server = {feedback_server}")
+            
+            """
             rxBuffer_payload, nRx_p = com1.getData(10)
             print("Payload recebido")
             print("-"*30)
-            time.sleep(0.01)
+            time.sleep(0.05)
+            """
             rxBuffer_eop, nRx_e = com1.getData(4)
             print("EOP recebido")
             print("-"*30)
@@ -199,17 +227,15 @@ def main():
             # Quando o Server receber o último pacote, ele vai retornar no payload um byte com valor 2.
             # Dessa forma, o Client pode parar de enviar pacotes e ambos podem encerrar a transmissão.
             
-            """
-            if payload_ok:
+            
+            if feedback_server == 1:
                 n_pacote += 1
                 
-            elif payload_not_ok:
+            elif feedback_server == 0:
                 pass
             
-            elif recebeu_ultimo pacote:
+            elif feedback_server == 2:
                 enviando = False
-            """
-            n_pacote += 1
             
         
         
