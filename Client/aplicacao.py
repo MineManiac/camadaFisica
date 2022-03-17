@@ -23,7 +23,7 @@ import sys
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM3"                  # Windows(variacao de)
+serialName = "COM4"                  # Windows(variacao de)
 
 def datagram_head(n_pacote, total_pacotes, tamanho_payload):
     
@@ -49,18 +49,18 @@ def main():
     try:
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM3')
+        com1 = enlace('COM4')
         
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         com1.enable()
         #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
-        print(com1)
+        print(f'com1 = {com1}')
+        print("-"*30)
         
         #aqui você deverá gerar os dados a serem transmitidos. 
         #seus dados a serem transmitidos são uma lista de bytes a serem transmitidos. Gere esta lista com o 
         #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
-        print("-"*30)
         print("Carregando dados para transmissão:")
         print("-"*30)
         
@@ -73,32 +73,44 @@ def main():
             
         img_bytes_len = len(img_bytes_lista)
         
-        quantidade, resto = divmod(img_bytes_len, 114)
+        tamanho_max_payload = 114
         
-        print(quantidade, resto)
-        
+        quantidade, resto = divmod(img_bytes_len, tamanho_max_payload)
+       
         total_pacotes = quantidade
         if resto > 0:
             total_pacotes += 1
-                
+            
+        print(f"Tamanho máximo de payload: {tamanho_max_payload}")
+        print("-"*30)
+        print(f"Quantidade de pacotes: {total_pacotes}")
+        print("-"*30)
+        print(f"Resto de Bytes para o último pacote: {resto}")
+        print("-"*30)
+        
+        # Handshake
+        # O Client precisa mandar um handshake para saber se o Server está online
+        # Criando head e eop do pacote Handshake (sem payload)
+        handshake_head = datagram_head(0, total_pacotes, 0)
+        handshake_eop = datagram_eop()
+        print("Entrou no loop para tentar conectar ao Server")
+        print("-"*30)
         tentando = True
         while tentando:
-            print("entrou no loop")
-            print("-"*30)
-            # Handshake
-            # Primeiro o Client manda um handshake para saber se o Server está online
-            handshake_head = datagram_head(0, total_pacotes, 0)
-            handshake_eop = datagram_eop()
             # Primeiro manda o head
-            handshake_head_txBuffer = handshake_head
-            com1.sendData(handshake_head_txBuffer)
+            print("Transmitindo Head")
+            print("-"*30)
+            com1.sendData(handshake_head)
             time.sleep(0.01)
+            # O Handshake não possui payload
             # Depois manda o eop
-            handshake_eop_txBuffer = handshake_eop
-            com1.sendData(handshake_eop_txBuffer)
+            print("Transmitindo EOP")
+            print("-"*30)
+            com1.sendData(handshake_eop)
             time.sleep(0.01)
             
             # Agora o Client espera uma resposta do Server por 5 segundos
+            print("Esperando resposta do Server")
             handshake_rxBuffer_head, nRx = com1.getData(10)            
             
             if nRx == 0:
@@ -114,52 +126,91 @@ def main():
                 tentando = False          
                 handshake_rxBuffer_eop, nRx = com1.getData(4)
                 
+        # Se deu tudo certo na conexão com o Server, a transmissão se inicia
+        print("A transmissão vai começar")   
+        print("-"*30)
+        time.sleep(1)
         
+        print("Entrou no loop de envio dos pacotes com bytes da imagem. ")
+        print("-"*30)
         n_pacote = 1
         i_lista_inicial = 0
-        while n_pacote <= total_pacotes:  
-            print("entrou no segundo loop")
-            print(n_pacote)
+        enviando = True        
+        while enviando:
+            print(f"Número do pacote atual: {n_pacote}")
+            print("-"*30)
             # PAYLOAD - de 0 a 114 bytes
             if n_pacote < total_pacotes:
-                tamanho_payload = 114
+                i_lista_final = i_lista_inicial + tamanho_max_payload
+                lista_bytes_envio = img_bytes_lista[i_lista_inicial:i_lista_final]
+                i_lista_inicial = i_lista_final
             elif n_pacote == total_pacotes:
-                tamanho_payload = resto+1
-            
-            i_lista_final = i_lista_inicial + tamanho_payload
-            lista_bytes_envio = img_bytes_lista[i_lista_inicial:i_lista_final]
-            i_lista_inicial = i_lista_final
-            
-            payload, tamanho_payload = datagram_payload(lista_bytes_envio)
+                print("Último pacote")
+                print("-"*30)
+                lista_bytes_envio = img_bytes_lista[i_lista_inicial:]
+                
+            # PAYLOAD
+            # Array de bytes que compõem a imagem que está sendo enviada
+            txBuffer_payload, tamanho_payload = datagram_payload(lista_bytes_envio)
                 
             # HEAD - 10 bytes
             # Número do pacote 
             # Número total de pacotes que serão transmitidos
             # Tamanho do Payload desse pacote
-            
-            head = datagram_head(n_pacote, total_pacotes, tamanho_payload)
+            txBuffer_head = datagram_head(n_pacote, total_pacotes, tamanho_payload)
 
             # EOP - 4 bytes
+            txBuffer_eop = datagram_eop()
             
-            eop = datagram_eop()
-            
-            # Criação do pacote que vai ser enviado
-            print("manda head")
-            txBuffer_head = head
+            # Enviando pacote por partes
+            print("Tranmitindo Head")
+            print("-"*30)
             com1.sendData(txBuffer_head)
-            time.sleep(.01)
+            time.sleep(0.01)
             
-            print("manda payload")
-            txBuffer_payload = payload
+            print("Transmitindo Payload")
+            print("-"*30)
             com1.sendData(txBuffer_payload)
-            time.sleep(.01)
+            time.sleep(0.01)
             
-            print("manda eop")
-            txBuffer_eop = eop
+            print("Transmitindo EOP")
+            print("-"*30)
             com1.sendData(txBuffer_eop)
-            time.sleep(.01)
+            time.sleep(0.01)
             
+            # Depois de mandar o pacote, o Client precisa receber um feedback do Server
+            rxBuffer_head, nRx_h = com1.getData(10)
+            print("Head recebido")
+            print("-"*30)
+            time.sleep(0.01)
+            rxBuffer_payload, nRx_p = com1.getData(10)
+            print("Payload recebido")
+            print("-"*30)
+            time.sleep(0.01)
+            rxBuffer_eop, nRx_e = com1.getData(4)
+            print("EOP recebido")
+            print("-"*30)
+            time.sleep(0.01)
+            
+            # Se estiver tudo ok, o Server vai retornar no payload um byte com valor 1.
+            # Dessa forma, o Client pode prosseguir para o próximo pacote.
+            # Se algo estiver errado, o Server vai retornar no payload um byte com valor 0.
+            # Dessa forma, o Client deve reenviar o pacote.
+            # Quando o Server receber o último pacote, ele vai retornar no payload um byte com valor 2.
+            # Dessa forma, o Client pode parar de enviar pacotes e ambos podem encerrar a transmissão.
+            
+            """
+            if payload_ok:
+                n_pacote += 1
+                
+            elif payload_not_ok:
+                pass
+            
+            elif recebeu_ultimo pacote:
+                enviando = False
+            """
             n_pacote += 1
+            
         
         
         """
