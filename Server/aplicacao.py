@@ -27,24 +27,30 @@ serialName = "COM5"                  # Windows(variacao de)
 
 
 def decifra_head(head):
+    print(head)
     lista = []
     
     for b in head:
         lista.append(b)
     
     n_pacote = lista[:2]
+    #print(n_pacote)
     total_pacotes = lista[2:4]
-    tamanho_payload = lista[4:5]
-    
+    #print(total_pacotes)
+    tamanho_payload = lista[4:6]
+    #print(tamanho_payload)
+        
     decifrado_n_pacote = int.from_bytes(n_pacote, byteorder='big')
     decifrado_total_pacotes = int.from_bytes(total_pacotes, byteorder='big')
-    decifrado_tamanho_payload = int.from_bytes(tamanho_payload, byteorder='big')
-    
-    
-    
     #print('{} NUMERO PACOTE / {} TOTAL DE PACOTES'.format(decifrado_n_pacote, decifrado_total_pacotes))
     #print('----------------')
-    #print('Bytes do Payload {}'.format(decifrado_tamanho_payload))
+    decifrado_tamanho_payload = int.from_bytes(tamanho_payload, byteorder='big')
+   # print('Bytes do Payload {}'.format(decifrado_tamanho_payload))
+    
+    
+   
+    
+    
     
     return(decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes)
     
@@ -95,6 +101,10 @@ def main():
              eop = bytes([0]) * 4
              com1.sendData(eop)
              time.sleep(.01)
+             com1.rx.clearBuffer()
+             
+             
+             
              
              
         else:
@@ -112,53 +122,101 @@ def main():
         
         #LOOP PEGANDO OS DADOS RECEBIDOS
         while decifrado_n_pacote < decifrado_total_pacotes:
+            com1.rx.clearBuffer()
+            time.sleep(0.01)
+         
             
-            rx_buffer_head = com1.getData(10)
+            rx_buffer_head,_= com1.getData(10)
             
             n_pacote_anterior = decifrado_n_pacote
             print("pacote anterior {}".format(n_pacote_anterior))
             
-            decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes = decifra_head(handshake_rxBuffer_head)
+            decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes = decifra_head(rx_buffer_head)
             print("pacote de agora {}".format(decifrado_n_pacote))
-            #caso o envio do pacote seja fora de ordem
-            if (n_pacote_anterior != (decifrado_n_pacote)):
-                print("ERRO!!! ENVIO DO PACOTE ESTÁ  FORA DE ORDEM - ENCERRANDO COMUNICACAO")
-                print("-"*30)
-                com1.disable()
-                sys.exit()
-                
+            
             rx_buffer_payload, size_payload = com1.getData(decifrado_tamanho_payload)
             
-            # Caso o tamanho do payload do head for diferente do payload recebido
-            if size_payload != decifrado_tamanho_payload:
-                print("ERRO!!! ENVIO O TAMANHO DO PAYLOAD RECEBIDO ESTÁ DIFERENTE DO QUE FOI MANDADO NO HEAD")
+            #caso o envio do pacote seja fora de ordem
+            if (n_pacote_anterior - (decifrado_n_pacote - 1)) < 0:
+                print("ERRO!!! ENVIO DO PACOTE ESTÁ  FORA DE ORDEM - ENCERRANDO COMUNICACAO")
                 print("-"*30)
+                
+                x= 0
+                #Mandando Datagrama Falando que o payload está errado
+                head = bytes([0]) * 4 + x.to_bytes(2, byteorder='big') + bytes([0]) * 4
+                
+                com1.sendData(head)
+                time.sleep(.1)
+                
+                eop = bytes([0]) * 4
+                com1.sendData(eop)
+                time.sleep(.1)
+                
                 com1.disable()
                 sys.exit()
-            
-            #concatenando bytes do payload para a imagem
-            imagem_recebida += rx_buffer_payload
                 
             
-            rx_buffer_eop, _ = com1.getData(4)
-            eop_desejado = bytes([11]) * 4
             
-            '''# Observação do EOP para ver se é o mesmo do esperado, fixo 4 bytes do numero 11
-            if rx_buffer_eop == eop_desejado:
-                pass
-            else:
-                print("ERRO!!! EOP ESTÁ INCORRETO")
+            
+            # Caso o tamanho do payload do head for diferente do payload recebido
+            elif size_payload != decifrado_tamanho_payload:
+                print("ERRO!!! ENVIO O TAMANHO DO PAYLOAD RECEBIDO ESTÁ DIFERENTE DO QUE FOI MANDADO NO HEAD")
                 print("-"*30)
+                x= 0
+                #Mandando Datagrama Falando que o payload está errado
+                head = bytes([0]) * 4 + x.to_bytes(2, byteorder='big') + bytes([0]) * 4
+                com1.sendData(head)
+                
+                time.sleep(.1)
+                
+                eop = bytes([0]) * 4
+                com1.sendData(eop)
+                time.sleep(.1)
+                
                 com1.disable()
-                sys.exit() '''
+                sys.exit()
+                
+                
+            elif decifrado_n_pacote >= decifrado_total_pacotes:
+                #Mandando Pacote falando que chegou no fim
+                x = 2
+                head = bytes([0]) * 4 + x.to_bytes(2, byteorder='big') + bytes([0]) * 4
+                
+                com1.sendData(head)
+                time.sleep(.01)
+                
+                eop = bytes([0]) * 4
+                com1.sendData(eop)
+                time.sleep(.01)
+                imagem_recebida += rx_buffer_payload
+                
+                break
+        
+        
+            else:
+                #Mandando Datagrama Falando que o payload está certo
+                x = 1
+                head = bytes([0]) * 4 + x.to_bytes(2, byteorder='big') + bytes([0]) * 4
+                
+                com1.sendData(head)
+                time.sleep(.1)
+                
+                eop = bytes([0]) * 4
+                com1.sendData(eop)
+                time.sleep(.01)
+            
+            
+                #concatenando bytes do payload para a imagem
+                imagem_recebida += rx_buffer_payload
+   
+            
             
             print("NUMERO PACOTE {} / TOTAL DE PACOTE {}".format(decifrado_n_pacote, decifrado_total_pacotes))
             print("-"*30)
             
             #Quando chegar no ultimo pacote sai do while                     
-            if decifrado_n_pacote >= decifrado_total_pacotes:
-                break
-        
+            
+        #print(int.from_bytes(imagem_recebida, byteorder='big'))
         write_image = "imgs/naorickrollcopia.jpg"
         f = open(write_image, "wb")
         f.write(imagem_recebida)
