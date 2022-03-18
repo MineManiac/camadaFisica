@@ -5,6 +5,35 @@
 #Aplicação
 ####################################################
 
+'''DATAGRAMA
+
+h0 – tipo de mensagem
+h1 – livre
+h2 – livre
+h3 – número total de pacotes do arquivo
+h4 – número do pacote sendo enviado
+h5 – se tipo for handshake:id do arquivo
+h5 – se tipo for dados: tamanho do payload
+h6 – pacote solicitado para recomeço quando a erro no envio.
+h7 – último pacote recebido com sucesso.
+h8 – h9 – CRC
+PAYLOAD – variável entre 0 e 114 bytes. Reservado à transmissão dos arquivos.
+EOP – 4 bytes: 0xAA 0xBB 0xCC 0xDD
+
+
+TIPO 1 - HANDSHAKE h0 CLIENTE SERVIDOR- 1, IDENTIFICADOR DO SERVIDOR A GENTE ESCOLHE PODE SER 1, PRECISA CONTER O NUMERO TOTAL DE PACOTES 
+TIPO 2 - RESPOSTA DO SERVIDOR CLIENTE h0 - 2, id tipo 1 deve ser correto
+TIPO 3 - MANDAR DADOS CLIENTE SERVIDOR h0 - 3, Payload, numero do pacote, numero total de pacotes
+TIPO 4 - CHECANDO DADOS PARA VER SE ESTÁ CERTO SERVIDOR CLIENTE h0 - 4 - verificar pacote, 
+checar eop para ver se está no lugar certo. Enviar para o cliente o numero do pacote checado.
+
+TIPO 5 - Mensagem de Timeout q é enviado, ambos os lados h0 - 5, é enviado quando excede o tempo encerrando a comunicação
+
+TIPO 6 - Mensagem de erro SERVIDOR CLIENTE h0 - 6, tipo 3 inválida, bytes faltando, fora do formato, pacote errado esperado pelo servidor.
+Contém o número correto do pacote esperado pelo servidor h6, orientando o cliente para o reenvio. 
+
+
+'''
 
 #esta é a camada superior, de aplicação do seu software de comunicação serial UART.
 #para acompanhar a execução e identificar erros, construa prints ao longo do código! 
@@ -53,6 +82,39 @@ def decifra_head(head):
     
     
     return(decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes)
+
+def datagram_head(tipo, total_pacotes, n_pacote, ,tamanho_payload, pacote_erro, pacote_sucesso):
+    
+    h0 = tipo.to_bytes(1, byteorder='big')#tipo mensagem
+    h1 = b'\x00'
+    h2 = b'\x00'
+    h3 = total_pacotes.to_bytes(1,byteorder='big')
+    h4 = n_pacote.to_bytes(1,byteorder='big')
+    h5 = tamanho_payload.to_bytes(1,byteorder='big')
+    h6 = pacote_erro.to_bytes(1,byteorder='big')#pacote solicitado para reenvio caso erro
+    h7 = pacote_sucesso.to_bytes(1,byteorder='big')
+    h8 = b'\x00'
+    h9 = b'\x00'
+    
+    
+    
+    head = h0 + h1 + h2 + h3 + h4 + h5 + h6 + h7 + h8 + h9
+   
+    return head 
+
+def datagram_payload(lista_bytes_envio):
+    payload = b''
+    tamanho_payload = len(lista_bytes_envio)
+    for b in lista_bytes_envio:
+        payload += b.to_bytes(1, byteorder='big')
+        
+    return payload, tamanho_payload
+
+def datagram_eop():
+    
+    eop = (4 * bytes([11]))
+    
+    return eop
     
     
 
