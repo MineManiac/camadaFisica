@@ -71,7 +71,7 @@ def main():
         print("-"*30)
         
         #aqui você deverá gerar os dados a serem transmitidos. 
-        #seus dados a serem transmitidos são uma lista de bytes a serem transmitidos. Gere esta lista com o 
+        #seus dados a serem transmitidos são uma lista de bytes a serem transmiti3os. Gere esta lista com o 
         #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
         print("Carregando dados para transmissão:")
         print("-"*30)
