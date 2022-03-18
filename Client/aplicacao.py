@@ -12,7 +12,7 @@
 
 from enlace import *
 import time
-import numpy as np
+#import numpy as np
 import sys
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
@@ -23,7 +23,7 @@ import sys
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM4"                  # Windows(variacao de)
+serialName = "COM3"                  # Windows(variacao de)
 
 def datagram_head(n_pacote, total_pacotes, tamanho_payload):
     
@@ -61,7 +61,7 @@ def main():
     try:
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM4')
+        com1 = enlace('COM3')
         
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
@@ -185,7 +185,7 @@ def main():
             txBuffer_eop = datagram_eop()
             
             # Enviando pacote por partes
-            print("Tranmitindo Head")
+            print("Transmitindo Head")
             print("-"*30)
             com1.sendData(txBuffer_head)
             time.sleep(0.1)
@@ -207,7 +207,9 @@ def main():
             print("-"*30)
             time.sleep(0.01)
             feedback_server = decifra_head(rxBuffer_head)
+            time.sleep(0.01)
             print(f"feedback server = {feedback_server}")
+            print("-"*30)
             
             """
             rxBuffer_payload, nRx_p = com1.getData(10)
@@ -228,6 +230,7 @@ def main():
             # Dessa forma, o Client pode parar de enviar pacotes e ambos podem encerrar a transmissão.
             
             
+            """
             if feedback_server == 1:
                 n_pacote += 1
                 
@@ -236,66 +239,21 @@ def main():
             
             elif feedback_server == 2:
                 enviando = False
-            
-        
-        
-        """
-        #print("txBuffer = {}".format(txBuffer))
-        print("txBufferLen = {}".format(len(txBuffer)))
-        print("-"*30)
-        #finalmente vamos transmitir os dados. Para isso usamos a funçao sendData que é um método da camada enlace.
-        #faça um print para avisar que a transmissão vai começar.
-        #tente entender como o método send funciona!
-        #Cuidado! Apenas trasmitimos arrays de bytes! Nao listas!
-          
-        print("A transmissão vai começar")   
-        print("-"*30)
-        time.sleep(1)
-        
-        # Nosso handshake será um array com 1 byte referente ao tamanho do próximo array a ser enviado
-        txBufferLen = bytes([len(txBuffer)])
-        print("Handshake = {}".format(txBufferLen))
-        print("-"*30)
-        print("Transmitindo handshake")
-        print("-"*30)
-        com1.sendData(np.asarray(txBufferLen))
-        # Faz uma pausa para deixar o outro computador receber 
-        time.sleep(1)
-        print("Transmitindo mensagem")
-        print("-"*30)
-        # Transmitindo a mensagem que desejamos
-        com1.sendData(np.asarray(txBuffer))
-              
-        
-        print("A Recepção vai comecar")
-        print("-"*30)
-        #acesso aos bytes recebidos
-        rxBuffer, nRx = com1.getData(1)
-        
-        if nRx == 0:
-            print("Timeout de 10 segundos")
-            print("-"*30)
-            com1.disable()
-        
-        else:
-            print("Recebeu RxBuffer")
-            print("-"*30)
-            
-            # Transformando byte recebido no rxBuffer para int
-            n_rxBuffer = int.from_bytes(rxBuffer, byteorder='big')
-            print("Quantidade de bytes recebidos pelo Server = {}".format(n_rxBuffer))
-            print("-"*30)
-            print("Quantidade de bytes enviados pelo Client = {}".format(quant))
-            print("-"*30)
-            
-            if n_rxBuffer == quant:
-                print("Sucesso! O servidor recebeu os comandos enviados")
-                print("-"*30)
-            else:
-                print("Falhou")
-                print("-"*30)
-                
             """
+            
+            if feedback_server == 1:
+                print("Tudo ok, pode proseeguir com o envio do pacote")
+                n_pacote += 1
+            elif feedback_server == 0:
+                print("Algo deu errado, precisa reenviar o pacote")
+                enviando = False
+            
+            elif feedback_server == 2:
+                print("Último pacote recebido")
+                enviando = False
+                
+            print("-"*30)
+            
         # Encerra comunicação
         print("Comunicação encerrada")
         print("-"*30)
