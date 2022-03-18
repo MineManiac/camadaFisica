@@ -41,21 +41,25 @@ def datagram_payload(lista_bytes_envio):
 
 def datagram_eop():
     
-    eop = (4 * bytes([11]))
+    eop = b'\xAA\xBB\xCC\xDD'
     
     return eop
 
 def decifra_head(head):
-    lista = []
+    lista_head = list(head)
     
-    for b in head:
-        lista.append(b)
+    tipo_mensagem = lista_head[0]
+    numero_total_pacotes = lista_head[3]
+    numero_pacote = lista_head[4]
+    tamanho_payload = lista_head[5]
+    # O lista_head[6], é o número do pacote que o Server está solicitando para mandar novamente
+    pacote_solicitado = lista_head[6]
+    # O lista_head[7], é o número do último pacote recebido com sucesso pelo Server
+    ultimo_pacote = lista_head[7]
+    # Os elementos de lista_head[8] e lista_head[9] são os CRC
+    crc = lista_head[8:]
     
-    tamanho_payload = lista[4:6]
-    
-    decifrado_tamanho_payload = int.from_bytes(tamanho_payload, byteorder='big')
-    
-    return(decifrado_tamanho_payload)
+    return(tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc)
     
 def main():
     try:
