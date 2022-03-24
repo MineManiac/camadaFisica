@@ -23,11 +23,22 @@ import sys
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM3"                  # Windows(variacao de)
+serialName = "COM4"                  # Windows(variacao de)
 
-def datagram_head(n_pacote, total_pacotes, tamanho_payload):
+def datagram_head(tipo, total_pacotes, n_pacote, ,tamanho_payload, pacote_erro, pacote_sucesso):
     
-    head = n_pacote.to_bytes(2, byteorder='big') + total_pacotes.to_bytes(2, byteorder='big') + tamanho_payload.to_bytes(2, byteorder='big') + (6 * bytes([0]))
+    h0 = tipo.to_bytes(1, byteorder='big')#tipo mensagem
+    h1 = b'\x00'
+    h2 = b'\x00'
+    h3 = total_pacotes.to_bytes(1,byteorder='big')
+    h4 = n_pacote.to_bytes(1,byteorder='big')
+    h5 = tamanho_payload.to_bytes(1,byteorder='big')
+    h6 = pacote_erro.to_bytes(1,byteorder='big')#pacote solicitado para reenvio caso erro
+    h7 = pacote_sucesso.to_bytes(1,byteorder='big')
+    h8 = b'\x00'
+    h9 = b'\x00'
+    
+    head = h0 + h1 + h2 + h3 + h4 + h5 + h6 + h7 + h8 + h9
    
     return head 
 
@@ -57,15 +68,33 @@ def decifra_head(head):
     # O lista_head[7], é o número do último pacote recebido com sucesso pelo Server
     ultimo_pacote = lista_head[7]
     # Os elementos de lista_head[8] e lista_head[9] são os CRC
-    crc = lista_head[8:]
+    crc_bytes = b''
+    for i in lista_head[8:]:
+        crc_bytes += bytes([i])     
+        
+    crc = int.from_bytes(crc_bytes, byteorder='big')
     
     return(tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc)
+  
+def checa_eop(eop):
+    lista_eop = list(eop)
+    eop_int_correto = [170, 187, 204, 221]
+    
+    byte1_int = int.from_bytes(lista_eop[0], byteorder='big')
+    byte2_int = int.from_bytes(lista_eop[1], byteorder='big')
+    byte3_int = int.from_bytes(lista_eop[2], byteorder='big')
+    byte4_int = int.from_bytes(lista_eop[3], byteorder='big')
+    
+    if (eop_int_correto[0] == byte1_int) and (eop_int_correto[1] == byte2_int) and (eop_int_correto[2] == byte3_int) and (eop_int_correto[3] == byte4_int):
+        return True
+    else:
+        return False
     
 def main():
     try:
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM3')
+        com1 = enlace('COM4')
         
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
