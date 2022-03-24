@@ -52,38 +52,30 @@ import sys
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM4"                  # Windows(variacao de)
+serialName = "COM3"                  # Windows(variacao de)
 
 
 def decifra_head(head):
-    print(head)
-    lista = []
+    lista_head = list(head)
     
-    for b in head:
-        lista.append(b)
-    
-    n_pacote = lista[:2]
-    #print(n_pacote)
-    total_pacotes = lista[2:4]
-    #print(total_pacotes)
-    tamanho_payload = lista[4:6]
-    #print(tamanho_payload)
+    tipo_mensagem = lista_head[0]
+    numero_total_pacotes = lista_head[3]
+    numero_pacote = lista_head[4]
+    tamanho_payload = lista_head[5]
+    # O lista_head[6], é o número do pacote que o Server está solicitando para mandar novamente
+    pacote_solicitado = lista_head[6]
+    # O lista_head[7], é o número do último pacote recebido com sucesso pelo Server
+    ultimo_pacote = lista_head[7]
+    # Os elementos de lista_head[8] e lista_head[9] são os CRC
+    crc_bytes = b''
+    for i in lista_head[8:]:
+        crc_bytes += bytes([i])     
         
-    decifrado_n_pacote = int.from_bytes(n_pacote, byteorder='big')
-    decifrado_total_pacotes = int.from_bytes(total_pacotes, byteorder='big')
-    #print('{} NUMERO PACOTE / {} TOTAL DE PACOTES'.format(decifrado_n_pacote, decifrado_total_pacotes))
-    #print('----------------')
-    decifrado_tamanho_payload = int.from_bytes(tamanho_payload, byteorder='big')
-   # print('Bytes do Payload {}'.format(decifrado_tamanho_payload))
+    crc = int.from_bytes(crc_bytes, byteorder='big')
     
-    
-   
-    
-    
-    
-    return(decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes)
+    return(tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc)
 
-def datagram_head(tipo, total_pacotes, n_pacote, ,tamanho_payload, pacote_erro, pacote_sucesso):
+def datagram_head(tipo, total_pacotes, n_pacote, tamanho_payload, pacote_erro, pacote_sucesso):
     
     h0 = tipo.to_bytes(1, byteorder='big')#tipo mensagem
     h1 = b'\x00'
@@ -146,15 +138,14 @@ def checa_eop(eop):
     else:
         return False
     
-    
-    
+
 
 def main():
     try:
         
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM4')
+        com1 = enlace('COM3')
         
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
@@ -162,64 +153,92 @@ def main():
         time.sleep(.2)
         #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
         print(com1)
-                
+        
         
         print("A Recepção do Handshake vai comecar")
         print("-"*30)
         
+        
+        
         #time.sleep(30)
         
+        
+        ocioso = True
+        
+        while ocioso:
+        print("Está OCIOSO")
+        print("-"*30)
+        
         # Recebe Handshake do cliente
-        handshake_rxBuffer_head,_ = com1.getData(10)
-        print(handshake_rxBuffer_head)
+        tipo1_head,_ = com1.getData(10)
+        print(tipo1_head)
         
         # Decifra o head para saber se é handshake ou n
-        decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes = decifra_head(handshake_rxBuffer_head)
+        tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(tipo1_head)
         
-        # Tamanho do payload, ja que no handshake o valor é 0, não precisa de get data
-        handshake_rxBuffer_payload = decifrado_tamanho_payload
-        
-        #EOP do handshake
-        handshake_rxBuffer_eop = com1.getData(4)
-        
-        if handshake_rxBuffer_payload == 0:
-            #Resposta para o cliente, enviando Head 10 bytes, Payload 0 bytes, EOP 4 bytes
-             print("A transmissao Handshake vai comecar vai comecar")
-             print("-"*30)
-             head = bytes([0]) * 10
-             
-             com1.sendData(head)
-             time.sleep(.01)
-             
-             eop = bytes([0]) * 4
-             com1.sendData(eop)
-             time.sleep(.01)
-             com1.rx.clearBuffer()
-             
-             
-             
-             
-             
+        if tipo_mensagem == 1:
+            #EOP do handshake
+            tipo1_eop,_= com1.getData(4)
+            checa = checa_eop(tipo1_eop)
+            
+            if checa_eop == True:
+                ocioso = False
+                time.sleep(1)
+            else:
+                pass
         else:
-            com1.disable()
-            sys.exit()
+            time.sleep(1)
+            pass
         
-        
-        #Pós HANDSHAKE
-        
+        #Pós conferir HANDSHAKE        
         #RICKROLL EM BYTES
         imagem_recebida = b''
+        
+        print("Mandando Mensagem tipo 2")
+        print("-"*30)
+        mensagem_tipo2 = datagram_head(2, numero_total_pacotes, 0, tamanho_payload, 0, 0) + datagram_eop()
+        com1.sendData(mensagem_tipo2)
+        time.sleep(.1)
+        
+        
+        
         
         print("A Recepção do Arquivo vai comecar")
         print("-"*30)
         
+        
+        cont = 1
+
         #LOOP PEGANDO OS DADOS RECEBIDOS
-        while decifrado_n_pacote < decifrado_total_pacotes:
-            com1.rx.clearBuffer()
-            time.sleep(0.01)
-         
+        while contador <= numero_total_pacotes:
+            timer1 = time.perf_counter()
+            timer2 = time.perf_counter()
             
-            rx_buffer_head,_= com1.getData(10)
+            head,_= com1.getData(10)
+            
+            
+            tipo, numero_total_pacotes, numero_pacote, payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(head)
+            
+            if tipo == 3:
+                payload,_= com1.getData(payload)
+                
+            else:
+                time.sleep(1)
+                tempo_decorrido= time.perf_counter() - timer2
+                
+                if tempo decorrido > 20:
+                    ocioso = True
+                    mensagem_tipo5 = datagram_head(5, 0, 0, 0, 0, 0) + datagram_eop()
+                    com1.sendData(mensagem_tipo5)
+                else: 
+                
+                
+                    
+                
+                
+                
+            
+            
             
             n_pacote_anterior = decifrado_n_pacote
             print("pacote anterior {}".format(n_pacote_anterior))
