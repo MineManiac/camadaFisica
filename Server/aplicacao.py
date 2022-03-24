@@ -112,9 +112,40 @@ def datagram_payload(lista_bytes_envio):
 
 def datagram_eop():
     
-    eop = (4 * bytes([11]))
+    eop = b'\xAA\xBB\xCC\xDD'
     
     return eop
+
+def decifra_head(head):
+    lista_head = list(head)
+    
+    tipo_mensagem = lista_head[0]
+    numero_total_pacotes = lista_head[3]
+    numero_pacote = lista_head[4]
+    tamanho_payload = lista_head[5]
+    # O lista_head[6], é o número do pacote que o Server está solicitando para mandar novamente
+    pacote_solicitado = lista_head[6]
+    # O lista_head[7], é o número do último pacote recebido com sucesso pelo Server
+    ultimo_pacote = lista_head[7]
+    # Os elementos de lista_head[8] e lista_head[9] são os CRC
+    crc = lista_head[8:10]
+    
+    return(tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc)
+
+def checa_eop(eop):
+    lista_eop = list(eop)
+    eop_int_correto = [170, 187, 204, 221]
+    
+    byte1_int = int.from_bytes(lista_eop[0], byteorder='big')
+    byte2_int = int.from_bytes(lista_eop[1], byteorder='big')
+    byte3_int = int.from_bytes(lista_eop[2], byteorder='big')
+    byte4_int = int.from_bytes(lista_eop[3], byteorder='big')
+    
+    if (eop_int_correto[0] == byte1_int) and (eop_int_correto[1] == byte2_int) and (eop_int_correto[2] == byte3_int) and (eop_int_correto[3] == byte4_int):
+        return True
+    else:
+        return False
+    
     
     
 
