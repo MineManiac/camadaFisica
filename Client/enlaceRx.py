@@ -68,28 +68,13 @@ class RX(object):
         return(b)
 
     def getNData(self, size):
-        
-        if size == 10:
-            inicial = time.perf_counter()
-            while(self.getBufferLen() < size):
-                time.sleep(0.05)
-                
-                final = time.perf_counter()
-                timer = final - inicial
-                
-                if timer >= 5:
-                    print("Tempo decorrido = {}".format(timer))
-                    print("-"*30)
-                    return b''
-                              
-            return(self.getBuffer(size))
-            
-        else:
-            while(self.getBufferLen() < size):
-                while(self.getBufferLen() < size):
-                    time.sleep(0.05)
-            return(self.getBuffer(size))
-
+        inicial = time.perf_counter()
+        while(self.getBufferLen() < size):
+            final = time.perf_counter()
+            if (final-inicial) >= 1:
+                return b''
+            time.sleep(0.05)                 
+        return(self.getBuffer(size))
 
     def clearBuffer(self):
         self.buffer = b""

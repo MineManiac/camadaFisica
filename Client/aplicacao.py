@@ -1,13 +1,40 @@
 #####################################################
 # Camada Física da Computação
-#Carareto
-#11/08/2020
-#Aplicação
+# Carareto
+# 11/08/2020
+# Aplicação
 ####################################################
 
+'''DATAGRAMA
 
-#esta é a camada superior, de aplicação do seu software de comunicação serial UART.
-#para acompanhar a execução e identificar erros, construa prints ao longo do código! 
+h0 – tipo de mensagem
+h1 – livre
+h2 – livre
+h3 – número total de pacotes do arquivo
+h4 – número do pacote sendo enviado
+h5 – se tipo for handshake:id do arquivo
+h5 – se tipo for dados: tamanho do payload
+h6 – pacote solicitado para recomeço quando a erro no envio.
+h7 – último pacote recebido com sucesso.
+h8 – h9 – CRC
+PAYLOAD – variável entre 0 e 114 bytes. Reservado à transmissão dos arquivos.
+EOP – 4 bytes: 0xAA 0xBB 0xCC 0xDD
+
+
+TIPO 1 - HANDSHAKE h0 CLIENTE SERVIDOR- 1, IDENTIFICADOR DO SERVIDOR A GENTE ESCOLHE PODE SER 1, PRECISA CONTER O NUMERO TOTAL DE PACOTES 
+TIPO 2 - RESPOSTA DO SERVIDOR CLIENTE h0 - 2, id tipo 1 deve ser correto
+TIPO 3 - MANDAR DADOS CLIENTE SERVIDOR h0 - 3, Payload, numero do pacote, numero total de pacotes
+TIPO 4 - CHECANDO DADOS PARA VER SE ESTÁ CERTO SERVIDOR CLIENTE h0 - 4 - verificar pacote, 
+checar eop para ver se está no lugar certo. Enviar para o cliente o numero do pacote checado.
+
+TIPO 5 - Mensagem de Timeout q é enviado, ambos os lados h0 - 5, é enviado quando excede o tempo encerrando a comunicação
+
+TIPO 6 - Mensagem de erro SERVIDOR CLIENTE h0 - 6, tipo 3 inválida, bytes faltando, fora do formato, pacote errado esperado pelo servidor.
+Contém o número correto do pacote esperado pelo servidor h6, orientando o cliente para o reenvio. 
+'''
+
+# Esta é a camada superior, de aplicação do seu software de comunicação serial UART.
+# para acompanhar a execução e identificar erros, construa prints ao longo do código! 
 
 
 from enlace import *
@@ -15,17 +42,17 @@ import time
 #import numpy as np
 import sys
 
-# voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
-#   para saber a sua porta, execute no terminal :
+# Voce deverá descomentar e configurar a porta com através da qual ira fazer comunicação.
+# Para saber a sua porta, execute no terminal :
 #   python -m serial.tools.list_ports
-# se estiver usando windows, o gerenciador de dispositivos informa a porta
+# Se estiver usando windows, o gerenciador de dispositivos informa a porta.
 
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
 serialName = "COM4"                  # Windows(variacao de)
 
-def datagram_head(tipo, total_pacotes, n_pacote, ,tamanho_payload, pacote_erro, pacote_sucesso):
+def datagram_head(tipo, total_pacotes, n_pacote, tamanho_payload, pacote_erro, pacote_sucesso):
     
     h0 = tipo.to_bytes(1, byteorder='big')#tipo mensagem
     h1 = b'\x00'
@@ -59,24 +86,29 @@ def datagram_eop():
 def decifra_head(head):
     lista_head = list(head)
     
-    tipo_mensagem = lista_head[0]
-    numero_total_pacotes = lista_head[3]
-    numero_pacote = lista_head[4]
-    tamanho_payload = lista_head[5]
-    # O lista_head[6], é o número do pacote que o Server está solicitando para mandar novamente
-    pacote_solicitado = lista_head[6]
-    # O lista_head[7], é o número do último pacote recebido com sucesso pelo Server
-    ultimo_pacote = lista_head[7]
-    # Os elementos de lista_head[8] e lista_head[9] são os CRC
-    crc_bytes = b''
-    for i in lista_head[8:]:
-        crc_bytes += bytes([i])     
-        
-    crc = int.from_bytes(crc_bytes, byteorder='big')
+    if len(lista_head) != 0:
     
-    return(tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc)
+        tipo_mensagem = lista_head[0]
+        numero_total_pacotes = lista_head[3]
+        numero_pacote = lista_head[4]
+        tamanho_payload = lista_head[5]
+        # O lista_head[6], é o número do pacote que o Server está solicitando para mandar novamente
+        pacote_solicitado = lista_head[6]
+        # O lista_head[7], é o número do último pacote recebido com sucesso pelo Server
+        ultimo_pacote = lista_head[7]
+        # Os elementos de lista_head[8] e lista_head[9] são os CRC
+        crc_bytes = b''
+        for i in lista_head[8:]:
+            crc_bytes += bytes([i])     
+            
+        crc = int.from_bytes(crc_bytes, byteorder='big')
+        
+        return(tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc)
+    
+    else:
+        return (0, 0, 0, 0, 0, 0, 0)
   
-def checa_eop(eop):
+def decifra_eop(eop):
     lista_eop = list(eop)
     eop_int_correto = [170, 187, 204, 221]
     
@@ -92,20 +124,21 @@ def checa_eop(eop):
     
 def main():
     try:
-        #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
-        #para declarar esse objeto é o nome da porta.
+        # Declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
+        # para declarar esse objeto é o nome da porta.
         com1 = enlace('COM4')
         
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         com1.enable()
-        #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
+        # Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
         print(f'com1 = {com1}')
         print("-"*30)
         
-        #aqui você deverá gerar os dados a serem transmitidos. 
-        #seus dados a serem transmitidos são uma lista de bytes a serem transmiti3os. Gere esta lista com o 
-        #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
+        # Aqui você deverá gerar os dados a serem transmitidos. 
+        # Seus dados a serem transmitidos são uma lista de bytes a serem transmitidos.
+        
+        # Carregando dados para transmissão
         print("Carregando dados para transmissão:")
         print("-"*30)
         
@@ -133,105 +166,112 @@ def main():
         print(f"Resto de Bytes para o último pacote: {resto}")
         print("-"*30)
         
-        # Handshake
-        # O Client precisa mandar um handshake para saber se o Server está online
-        # Criando head e eop do pacote Handshake (sem payload)
-        handshake_head = datagram_head(0, total_pacotes, 0)
-        handshake_eop = datagram_eop()
-        print("Entrou no loop para tentar conectar ao Server")
+        # Iniciando comunicação com Server
+        print("Iniciando comunicação")
         print("-"*30)
-        tentando = True
-        while tentando:
-            # Primeiro manda o head
-            print("Transmitindo Head")
+        inicia = False
+        while not inicia:
+            print("Tentando enviar handshake para o Server")
             print("-"*30)
-            com1.sendData(handshake_head)
+            # Handshake
+            # O Client precisa mandar um handshake para saber se o Server está online
+            # Criando head e eop do pacote Handshake (sem payload)
+            handshake = datagram_head(1, total_pacotes, 0, 0, 0, 0) + datagram_eop()
+            com1.sendData(handshake)
             time.sleep(0.01)
-            # O Handshake não possui payload
-            # Depois manda o eop
-            print("Transmitindo EOP")
-            print("-"*30)
-            com1.sendData(handshake_eop)
-            time.sleep(0.01)
+            time.sleep(5)
             
-            # Agora o Client espera uma resposta do Server por 5 segundos
-            print("Esperando resposta do Server")
-            print("-"*30)
+            rxBuffer_head = com1.getData(10)
             
-            handshake_rxBuffer_head, nRx = com1.getData(10)   
-            print(f"Handshake Head recebido: {handshake_rxBuffer_head}")
-            print("-"*30)
+            head_recebido = decifra_head(rxBuffer_head)
             
-            
-            if nRx == 0:
-                resposta = input("Servidor inativo. Tentar novamente? S/N  ")
-                print("-"*30)
-                if resposta.lower() == 's':
-                    pass
-                else:    
-                    print("Encerrando comunicação")
-                    com1.disable()
-                    sys.exit()
+            if head_recebido[0] == 2:
+                break
             else:
-                tentando = False          
-                
-                handshake_rxBuffer_eop, nRx = com1.getData(4)
-                time.sleep(.01)
-                print(f"Handshake EOP recebido: {handshake_rxBuffer_eop}")
-                print("-"*30)
-                
-                
-        # Se deu tudo certo na conexão com o Server, a transmissão se inicia
-        print("A transmissão vai começar")   
-        print("-"*30)
-        time.sleep(1)
+                pass
         
-        print("Entrou no loop de envio dos pacotes com bytes da imagem. ")
-        print("-"*30)
-        n_pacote = 1
         i_lista_inicial = 0
-        enviando = True        
-        while enviando:
-            print(f"Número do pacote atual: {n_pacote}")
+        cont = 1
+        while cont <= total_pacotes:
+            print("A transmissão vai começar")   
+            print("-"*30)
+            print(f"Número do pacote atual: {cont}")
             print("-"*30)
             # PAYLOAD - de 0 a 114 bytes
-            if n_pacote < total_pacotes:
+            if cont < total_pacotes:
                 i_lista_final = i_lista_inicial + tamanho_max_payload
                 lista_bytes_envio = img_bytes_lista[i_lista_inicial:i_lista_final]
                 i_lista_inicial = i_lista_final
-            elif n_pacote == total_pacotes:
+            elif cont == total_pacotes:
                 print("Último pacote")
                 print("-"*30)
                 lista_bytes_envio = img_bytes_lista[i_lista_inicial:]
                 
-            # PAYLOAD
+            '''DATAGRAMA
+            
+            HEAD - 10 bytes
+            h0 – tipo de mensagem
+            h1 – livre
+            h2 – livre
+            h3 – número total de pacotes do arquivo
+            h4 – número do pacote sendo enviado
+            h5 – se tipo for handshake:id do arquivo
+            h5 – se tipo for dados: tamanho do payload
+            h6 – pacote solicitado para recomeço quando a erro no envio.
+            h7 – último pacote recebido com sucesso.
+            h8 – h9 – CRC
+            PAYLOAD – variável entre 0 e 114 bytes. Reservado à transmissão dos arquivos.
+            EOP – 4 bytes: 0xAA 0xBB 0xCC 0xDD
+
+
+            TIPO 1 - HANDSHAKE h0 CLIENTE SERVIDOR- 1, IDENTIFICADOR DO SERVIDOR A GENTE ESCOLHE PODE SER 1, PRECISA CONTER O NUMERO TOTAL DE PACOTES 
+            TIPO 2 - RESPOSTA DO SERVIDOR CLIENTE h0 - 2, id tipo 1 deve ser correto
+            TIPO 3 - MANDAR DADOS CLIENTE SERVIDOR h0 - 3, Payload, numero do pacote, numero total de pacotes
+            TIPO 4 - CHECANDO DADOS PARA VER SE ESTÁ CERTO SERVIDOR CLIENTE h0 - 4 - verificar pacote, 
+            checar eop para ver se está no lugar certo. Enviar para o cliente o numero do pacote checado.
+
+            TIPO 5 - Mensagem de Timeout q é enviado, ambos os lados h0 - 5, é enviado quando excede o tempo encerrando a comunicação
+
+            TIPO 6 - Mensagem de erro SERVIDOR CLIENTE h0 - 6, tipo 3 inválida, bytes faltando, fora do formato, pacote errado esperado pelo servidor.
+            Contém o número correto do pacote esperado pelo servidor h6, orientando o cliente para o reenvio. 
+            '''
+            # PAYLOAD - 0 a 114 bytes
             # Array de bytes que compõem a imagem que está sendo enviada
             txBuffer_payload, tamanho_payload = datagram_payload(lista_bytes_envio)
                 
             # HEAD - 10 bytes
-            # Número do pacote 
-            # Número total de pacotes que serão transmitidos
-            # Tamanho do Payload desse pacote
-            txBuffer_head = datagram_head(n_pacote, total_pacotes, tamanho_payload)
+            txBuffer_head = datagram_head(3, total_pacotes, cont, tamanho_payload, 0, 0)
 
             # EOP - 4 bytes
             txBuffer_eop = datagram_eop()
             
-            # Enviando pacote por partes
-            print("Transmitindo Head")
+            # Enviando datagrama completo
+            print("Transmitindo Datagrama")
             print("-"*30)
-            com1.sendData(txBuffer_head)
-            time.sleep(0.1)
-            
-            print("Transmitindo Payload")
-            print("-"*30)
-            com1.sendData(txBuffer_payload)
+            txBuffer = txBuffer_head + txBuffer_payload + txBuffer_eop
+            com1.sendData(txBuffer)
             time.sleep(0.01)
+            timer1 = time.perf_counter()
+            timer2 = timer1
             
-            print("Transmitindo EOP")
-            print("-"*30)
-            com1.sendData(txBuffer_eop)
-            time.sleep(0.01)
+            # Tentativa de receber a mensagem de feedback do Server
+            
+            
+            
+            
+        
+        
+        
+        ####################################################################################################
+        
+        
+        
+        
+        print("Encerrando comunicação")
+        com1.disable()
+        sys.exit()
+            
+       
             
             # Depois de mandar o pacote, o Client precisa receber um feedback do Server
             
