@@ -50,7 +50,7 @@ import sys
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM4"                  # Windows(variacao de)
+serialName = "COM3"                  # Windows(variacao de)
 
 def datagram_head(tipo, total_pacotes, n_pacote, tamanho_payload, pacote_erro, pacote_sucesso):
     
@@ -126,7 +126,7 @@ def main():
     try:
         # Declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         # para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM4')
+        com1 = enlace(serialName)
         
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
@@ -178,7 +178,7 @@ def main():
                 lista_bytes_envio = img_bytes_lista[i_lista_inicial:i_lista_final]
                 i_lista_inicial = i_lista_final
                 lista_payloads.append(lista_bytes_envio)
-            elif cont == total_pacotes-1:
+            elif i == total_pacotes-1:
                 lista_bytes_envio = img_bytes_lista[i_lista_inicial:]
                 lista_payloads.append(lista_bytes_envio)
             
@@ -192,22 +192,25 @@ def main():
             # Handshake
             # O Client precisa mandar um handshake para saber se o Server está online
             # Criando head e eop do pacote Handshake (sem payload)
-            handshake = datagram_head(1, total_pacotes, 0, 0, 0, 0) + datagram_eop()
-            com1.sendData(handshake)
+            txBuffer_handshake = datagram_head(1, total_pacotes, 0, 0, 0, 0) + datagram_eop()
+            com1.sendData(txBuffer_handshake)
             time.sleep(0.01)
-            time.sleep(5)
             
-            rxBuffer_head = com1.getData(10)
-            
+            print("Esperando dados")
+            print("-"*30)
+            rxBuffer_head, nRx = com1.getData(10)
             head_recebido = decifra_head(rxBuffer_head)
+            rxBuffer_eop, _ = com1.getData(4)
             
             if head_recebido[0] == 2:
-                break
+                break            
             else:
-                pass
+                time.sleep(5)
         
+        time.sleep(30)
+        
+        # Mudar cont para outro valor quando quiser forçar um erro na ordem dos pacotes enviados pelo client
         cont = 1
-        #cont_anterior = 0
         print("A transmissão vai começar")   
         print("-"*30)
         while cont <= total_pacotes:
@@ -242,6 +245,7 @@ def main():
             TIPO 6 - Mensagem de erro SERVIDOR CLIENTE h0 - 6, tipo 3 inválida, bytes faltando, fora do formato, pacote errado esperado pelo servidor.
             Contém o número correto do pacote esperado pelo servidor h6, orientando o cliente para o reenvio. 
             '''
+            
             # PAYLOAD - 0 a 114 bytes
             # Array de bytes que compõem a imagem que está sendo enviada
             txBuffer_payload, tamanho_payload = datagram_payload(lista_payloads[cont-1])
@@ -265,14 +269,22 @@ def main():
             recebeu_mensagem = False
             while not recebeu_mensagem:
                 # Tenta receber mensagem do tipo 4
+                print("Esperando mensagem de feedback")
+                print("-"*30)
                 rxBuffer_head, nRx = com1.getData(10)
+                head_decifrado = decifra_head(rxBuffer_head)
+                print(f"Tamanho do head recebido = {nRx}")
+                print("-"*30)
+                print(f"Head recebido = {rxBuffer_head}")
+                print("-"*30)
                 time.sleep(0.01)
-                
+                            
                 if nRx == 0:
                     # Quer dizer que não recebeu mensagem
                     momento_final_1 = time.perf_counter()
                     timer_1 = momento_final_1 - momento_inicial_1
                     print("Não recebeu mensagem")
+                    print("-"*30)
                     if timer_1 > 5:
                         print("Transmitindo novamente o Datagrama")
                         print("-"*30)
@@ -294,52 +306,47 @@ def main():
                         com1.disable()
                         sys.exit()
                     
-                    else:
-                        # Tenta captar mensagem de erro do Server
-                        rxBuffer_head, nRx = com1.getData(10)
-                        time.sleep(0.01)
-                        if nRx == 0:
-                            pass
-                        else:
-                            head_decifrado = decifra_head(rxBuffer_head)                        
-                            rxBuffer_payload = com1.getData(head_decifrado[3])
-                            rxBuffer_eop, nRx = com1.getData(4)
-                            if head_decifrado[0] == 6:
-                                cont = head_decifrado[4]
-                                print("Transmitindo o Datagrama solicitado")
-                                print("-"*30)
-                                
-                                # PAYLOAD - 0 a 114 bytes
-                                # Array de bytes que compõem a imagem que está sendo enviada
-                                txBuffer_payload, tamanho_payload = datagram_payload(lista_payloads[cont-1])
-                                    
-                                # HEAD - 10 bytes
-                                txBuffer_head = datagram_head(3, total_pacotes, cont, tamanho_payload, 0, 0)
+                elif head_decifrado[0] == 6:
+                    # Tenta captar mensagem de erro do Server                       
+                    rxBuffer_payload = com1.getData(head_decifrado[3])
+                    rxBuffer_eop, nRx = com1.getData(4)
+                    
+                    print(f"Pacote solicitado = {head_decifrado[4]}")
+                    cont = head_decifrado[4]
+                    print("Transmitindo o Datagrama solicitado")
+                    print("-"*30)
+                    
+                    # PAYLOAD - 0 a 114 bytes
+                    # Array de bytes que compõem a imagem que está sendo enviada
+                    txBuffer_payload, tamanho_payload = datagram_payload(lista_payloads[cont-1])
+                        
+                    # HEAD - 10 bytes
+                    txBuffer_head = datagram_head(3, total_pacotes, cont, tamanho_payload, 0, 0)
 
-                                # EOP - 4 bytes
-                                txBuffer_eop = datagram_eop()
-                                
-                                # Enviando datagrama completo
-                                print("Transmitindo Datagrama")
-                                print("-"*30)
-                                txBuffer = txBuffer_head + txBuffer_payload + txBuffer_eop
-                                com1.sendData(txBuffer)
-                                time.sleep(0.01)
-                                
-                                # Resetando timers
-                                momento_inicial_1 = time.perf_counter()
-                                momento_inicial_2 = momento_inicial_1
+                    # EOP - 4 bytes
+                    txBuffer_eop = datagram_eop()
+                    
+                    # Enviando datagrama completo
+                    print("Transmitindo Datagrama")
+                    print("-"*30)
+                    txBuffer = txBuffer_head + txBuffer_payload + txBuffer_eop
+                    com1.sendData(txBuffer)
+                    time.sleep(0.01)
+                    
+                    # Resetando timers
+                    momento_inicial_1 = time.perf_counter()
+                    momento_inicial_2 = momento_inicial_1
                     
                 else:
                     # Quer dizer que recebeu mensagem
                     # Continua captando os dados da mensagem
-                    head_decifrado = decifra_head(rxBuffer_head)                        
-                    time.sleep(0.01)
+                    
                     rxBuffer_payload = com1.getData(head_decifrado[3])
                     time.sleep(0.01)
                     rxBuffer_eop, nRx = com1.getData(4)
                     time.sleep(0.01)
-                    cont += 1   
+                    cont += 1
+                    recebeu_mensagem = True
                     
             
         # Encerra comunicação
