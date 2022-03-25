@@ -71,7 +71,7 @@ class RX(object):
         inicial = time.perf_counter()
         while(self.getBufferLen() < size):
             final = time.perf_counter()
-            if (final-inicial) >= 1:
+            if (final-inicial) >= 3:
                 return b''
             time.sleep(0.05)                 
         return(self.getBuffer(size))
