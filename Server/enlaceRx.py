@@ -76,11 +76,15 @@ class RX(object):
             tempo_decorrido_1 = time.perf_counter() - timer1
             
             if tempo_decorrido_1 >= 2:
+                print('PASSOU 2 SEGUNDOS')
+                print('-'*30)
                 timer1 = time.perf_counter()
                 timer2 += tempo_decorrido_1
                 if timer2 >= 20:
-                    return
-                return(0)
+                    print('PASSOU 20 SEGUNDOS')
+                    print('-'*30)
+                    return(b'\xFF')
+                return(b'\00')
             
             time.sleep(0.05)  
         return(self.getBuffer(size))

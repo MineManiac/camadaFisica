@@ -163,6 +163,7 @@ def main():
         #time.sleep(30)
         
         
+        
         ocioso = True
         
         while ocioso:
@@ -191,14 +192,13 @@ def main():
             pass
         
         #Pós conferir HANDSHAKE        
-        #RICKROLL EM BYTES
-        imagem_recebida = b''
+        
         
         print("Mandando Mensagem tipo 2")
         print("-"*30)
         mensagem_tipo2 = datagram_head(2, numero_total_pacotes, 0, tamanho_payload, 0, 0) + datagram_eop()
         com1.sendData(mensagem_tipo2)
-        time.sleep(.1)
+        time.sleep(.01)
         
         
         
@@ -207,126 +207,121 @@ def main():
         print("-"*30)
         
         
+        
+        #RICKROLL EM BYTES
+        imagem_recebida = b''
+        
         cont = 1
 
         #LOOP PEGANDO OS DADOS RECEBIDOS
         while contador <= numero_total_pacotes:
+            
+            print("NUMERO PACOTE {} / TOTAL DE PACOTE {}".format(cont, numero_total_pacotes))
+            print("-"*30)
+            
+            
             timer1 = time.perf_counter()
             timer2 = time.perf_counter()
             
-            head,_= com1.getData(10)
+            pegou_dados = False
+            
+            while not pegou_dados:
+                head,size= com1.getData(10)
+                
+                if (head == b'\00') and (size == 1):
+                    print('Entrou no caso de Passar 2 segundos')
+                    print('-'*30)
+                    
+                    mensagem_tipo4 = datagram_head(4, 0, 0, 0, 0, cont-1) + datagram_eop()
+                    com1.sendData(mensagem_tipo4)
+                    time.sleep(0.01)
+                
+                elif (head == b'\FF') and (size == 1):
+                    print('Entrou no caso de Passar 20 segundos')
+                    print('-'*30)
+                    
+                    ocioso = True
+                    mensagem_tipo5 = datagram_head(5, 0, 0, 0, 0, 0) + datagram_eop()
+                    com1.sendData(mensagem_tipo5)
+                    time.sleep(0.01)
+                    com1.disable()
+                    sys.exit()
+                    
+                    
+                elif (size == 10):
+                    print('PEGOU DADOS TRUE')
+                    print('-'*30)
+                    pegou_dados = True
             
             
             tipo, numero_total_pacotes, numero_pacote, payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(head)
             
-            if tipo == 3:
-                payload,_= com1.getData(payload)
-                
-            else:
-                time.sleep(1)
-                tempo_decorrido= time.perf_counter() - timer2
-                
-                if tempo decorrido > 20:
-                    ocioso = True
-                    mensagem_tipo5 = datagram_head(5, 0, 0, 0, 0, 0) + datagram_eop()
-                    com1.sendData(mensagem_tipo5)
-                else: 
-                
-                
+            if numero_pacote == cont:
+                if tipo == 3:
+                    print('É TIPO 3')
+                    print('-'*30)
                     
+                    payload_tipo3,_= com1.getData(payload)
+                    
+                    eop,_ = com1.getData(4)
+                    
+                    eop_correto = checa_eop(eop)
+                    
+                    #bytes faltando, fora do formato, pacote errado esperado pelo servidor.
+                    if eop_correto == True:
+                        print('EOP ESTÁ CORRETO')
+                        print('-'*30)
+                        imagem_recebida += payload_tipo3
+                        
+                        mensagem_tipo4 = datagram_head(4, 0, 0, 0, 0, cont) + datagram_eop()
+                        com1.sendData(mensagem_tipo4)
+                        time.sleep(0.01)
+                        
+                        cont += 1
+                        
+                    if eop_correto == False:
+                        print('EOP ESTÁ ERRADO, FORA DE FORMATO, PODE HAVER BYTES FALTANDO')
+                        print('-'*30)
+                        
+                        mensagem_tipo6 = datagram_head(6, 0, 0, 0, cont, 0) + datagram_eop()
+                        com1.sendData(mensagem_tipo6)
+                        time.sleep(0.01)
+                        
+                        com1.rx.clearBuffer()
+                        time.sleep(0.01)
+                        
+                if tipo == 5:
+                    print('É TIPO 5')
+                    print('TIMEOUT CLIENT')
+                    print('-'*30)
+                    
+                    time.sleep(0.01)
+                    com1.disable()
+                    sys.exit()
                 
-                
-                
-            
-            
-            
-            n_pacote_anterior = decifrado_n_pacote
-            print("pacote anterior {}".format(n_pacote_anterior))
-            
-            decifrado_tamanho_payload, decifrado_n_pacote, decifrado_total_pacotes = decifra_head(rx_buffer_head)
-            print("pacote de agora {}".format(decifrado_n_pacote))
-            
-            rx_buffer_payload, size_payload = com1.getData(decifrado_tamanho_payload)
-            
-            #caso o envio do pacote seja fora de ordem
-            if (n_pacote_anterior - (decifrado_n_pacote - 1)) < 0:
-                print("ERRO!!! ENVIO DO PACOTE ESTÁ  FORA DE ORDEM - ENCERRANDO COMUNICACAO")
-                print("-"*30)
-                
-                x= 0
-                #Mandando Datagrama Falando que o payload está errado
-                head = bytes([0]) * 4 + x.to_bytes(2, byteorder='big') + bytes([0]) * 4
-                
-                com1.sendData(head)
-                time.sleep(.1)
-                
-                eop = bytes([0]) * 4
-                com1.sendData(eop)
-                time.sleep(.1)
-                
-                com1.disable()
-                sys.exit()
-                
-            
-            
-            
-            # Caso o tamanho do payload do head for diferente do payload recebido
-            elif size_payload != decifrado_tamanho_payload:
-                print("ERRO!!! ENVIO O TAMANHO DO PAYLOAD RECEBIDO ESTÁ DIFERENTE DO QUE FOI MANDADO NO HEAD")
-                print("-"*30)
-                x= 0
-                #Mandando Datagrama Falando que o payload está errado
-                head = bytes([0]) * 4 + x.to_bytes(2, byteorder='big') + bytes([0]) * 4
-                com1.sendData(head)
-                
-                time.sleep(.1)
-                
-                eop = bytes([0]) * 4
-                com1.sendData(eop)
-                time.sleep(.1)
-                
-                com1.disable()
-                sys.exit()
-                
-                
-            elif decifrado_n_pacote >= decifrado_total_pacotes:
-                #Mandando Pacote falando que chegou no fim
-                x = 2
-                head = bytes([0]) * 4 + x.to_bytes(2, byteorder='big') + bytes([0]) * 4
-                
-                com1.sendData(head)
-                time.sleep(.01)
-                
-                eop = bytes([0]) * 4
-                com1.sendData(eop)
-                time.sleep(.01)
-                imagem_recebida += rx_buffer_payload
-                
-                break
-        
-        
+                else:
+                    print('TIPO DA MENSAGEM ESTÁ ERRADA : {}'.format(tipo))
+                    print('-'*30)
+                    time.sleep(0.01)
+                    com1.disable()
+                    sys.exit()
             else:
-                #Mandando Datagrama Falando que o payload está certo
-                x = 1
-                head = bytes([0]) * 4 + x.to_bytes(2, byteorder='big') + bytes([0]) * 4
+                print("Numero do PACOTE Está ERRADO")
+                print('-'*30)
                 
-                com1.sendData(head)
-                time.sleep(.1)
+                mensagem_tipo6 = datagram_head(6, 0, 0, 0, cont, 0) + datagram_eop()
+                com1.sendData(mensagem_tipo6)
+                time.sleep(0.01)
                 
-                eop = bytes([0]) * 4
-                com1.sendData(eop)
-                time.sleep(.01)
+                com1.rx.clearBuffer()
+                time.sleep(0.01)
+                
+                
+
             
             
-                #concatenando bytes do payload para a imagem
-                imagem_recebida += rx_buffer_payload
-   
             
-            
-            print("NUMERO PACOTE {} / TOTAL DE PACOTE {}".format(decifrado_n_pacote, decifrado_total_pacotes))
-            print("-"*30)
-            
-            #Quando chegar no ultimo pacote sai do while                     
+        #Quando chegar no ultimo pacote sai do while                     
             
         #print(int.from_bytes(imagem_recebida, byteorder='big'))
         write_image = "imgs/naorickrollcopia.jpg"
