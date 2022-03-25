@@ -14,8 +14,9 @@ import time
 import threading
 
 # Class
+
 class RX(object):
-  
+    
     def __init__(self, fisica):
         self.fisica      = fisica
         self.buffer      = bytes(bytearray())
@@ -69,22 +70,7 @@ class RX(object):
 
     def getNData(self, size):
         
-        timer1 = time.perf_counter()
-        timer2 = 0
-        
         while(self.getBufferLen() < size):
-            tempo_decorrido_1 = time.perf_counter() - timer1
-            
-            if tempo_decorrido_1 >= 2:
-                print('PASSOU 2 SEGUNDOS')
-                print('-'*30)
-                timer1 = time.perf_counter()
-                timer2 += tempo_decorrido_1
-                if timer2 >= 20:
-                    print('PASSOU 20 SEGUNDOS')
-                    print('-'*30)
-                    return(b'\xFF')
-                return(b'\00')
             
             time.sleep(0.05)  
         return(self.getBuffer(size))

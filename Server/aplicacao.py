@@ -44,6 +44,7 @@ import numpy as np
 import sys
 
 
+
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
 #   python -m serial.tools.list_ports
@@ -52,7 +53,7 @@ import sys
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM3"                  # Windows(variacao de)
+serialName = "COM5"                  # Windows(variacao de)
 
 
 def decifra_head(head):
@@ -125,17 +126,27 @@ def decifra_head(head):
     return(tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc)
 
 def checa_eop(eop):
+    #print("ENTROU CHECA")
     lista_eop = list(eop)
+    #print(lista_eop)
     eop_int_correto = [170, 187, 204, 221]
     
-    byte1_int = int.from_bytes(lista_eop[0], byteorder='big')
-    byte2_int = int.from_bytes(lista_eop[1], byteorder='big')
-    byte3_int = int.from_bytes(lista_eop[2], byteorder='big')
-    byte4_int = int.from_bytes(lista_eop[3], byteorder='big')
     
-    if (eop_int_correto[0] == byte1_int) and (eop_int_correto[1] == byte2_int) and (eop_int_correto[2] == byte3_int) and (eop_int_correto[3] == byte4_int):
+    byte1 = lista_eop[0]
+    #print(byte1)
+    byte2 = lista_eop[1]
+    byte3 = lista_eop[2]
+    byte4 = lista_eop[3]
+    
+    
+    
+    print("passou de bytes pra int")
+    
+    if (eop_int_correto[0] == byte1) and (eop_int_correto[1] == byte2) and (eop_int_correto[2] == byte3) and (eop_int_correto[3] == byte4):
+        #print("passou o eop correto")
         return True
     else:
+        #print("passou o eop incorreto")
         return False
     
 
@@ -145,9 +156,10 @@ def main():
         
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM3')
+        com1 = enlace('COM5')
         
-    
+        com1.rx.clearBuffer()
+        time.sleep(0.01)
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         com1.enable()
         time.sleep(.2)
@@ -166,30 +178,40 @@ def main():
         
         ocioso = True
         
-        while ocioso:
-        print("Está OCIOSO")
-        print("-"*30)
-        
-        # Recebe Handshake do cliente
-        tipo1_head,_ = com1.getData(10)
-        print(tipo1_head)
-        
-        # Decifra o head para saber se é handshake ou n
-        tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(tipo1_head)
-        
-        if tipo_mensagem == 1:
-            #EOP do handshake
-            tipo1_eop,_= com1.getData(4)
-            checa = checa_eop(tipo1_eop)
+        while ocioso == True:
+            print("Está OCIOSO")
+            print("-"*30)
             
-            if checa_eop == True:
-                ocioso = False
-                time.sleep(1)
+            # Recebe Handshake do cliente
+            tipo1_head,_ = com1.getData(10)
+            print("recebeu HEAD")
+            print("-"*30)
+            print(tipo1_head)
+            
+            # Decifra o head para saber se é handshake ou n
+            tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(tipo1_head)
+            
+            if tipo_mensagem == 1:
+                #EOP do handshake
+                print("É tipo mensagem 1")
+                print("-"*30)
+                tipo1_eop,_= com1.getData(4)
+                checa = checa_eop(tipo1_eop)
+                
+                if checa == True:
+                    print("EOP CORRETO")
+                    print("-"*30)
+                    ocioso = False
+                    time.sleep(1)
+                    
+                if checa == False:
+                    print("EOP INCORRETO")
+                    print("-"*30)
+                    pass
+                
             else:
+                time.sleep(1)
                 pass
-        else:
-            time.sleep(1)
-            pass
         
         #Pós conferir HANDSHAKE        
         
@@ -212,23 +234,24 @@ def main():
         imagem_recebida = b''
         
         cont = 1
-
+        
+        timer1_inicio = time.perf_counter()
+        timer2_inicio = time.perf_counter()
+        
         #LOOP PEGANDO OS DADOS RECEBIDOS
-        while contador <= numero_total_pacotes:
+        while cont <= numero_total_pacotes:
+            timer2 = time.perf_counter() - timer2_inicio
+            timer1 = time.perf_counter() - timer1_inicio
             
             print("NUMERO PACOTE {} / TOTAL DE PACOTE {}".format(cont, numero_total_pacotes))
             print("-"*30)
-            
-            
-            timer1 = time.perf_counter()
-            timer2 = time.perf_counter()
             
             pegou_dados = False
             
             while not pegou_dados:
                 head,size= com1.getData(10)
                 
-                if (head == b'\00') and (size == 1):
+                if :
                     print('Entrou no caso de Passar 2 segundos')
                     print('-'*30)
                     
@@ -236,7 +259,7 @@ def main():
                     com1.sendData(mensagem_tipo4)
                     time.sleep(0.01)
                 
-                elif (head == b'\FF') and (size == 1):
+                elif (head == 255) and (size == 1):
                     print('Entrou no caso de Passar 20 segundos')
                     print('-'*30)
                     
@@ -255,7 +278,7 @@ def main():
             
             
             tipo, numero_total_pacotes, numero_pacote, payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(head)
-            
+            print("contador {}".format(cont))
             if numero_pacote == cont:
                 if tipo == 3:
                     print('É TIPO 3')
@@ -266,6 +289,7 @@ def main():
                     eop,_ = com1.getData(4)
                     
                     eop_correto = checa_eop(eop)
+                    print("EOP VALOR {}".format(eop_correto))
                     
                     #bytes faltando, fora do formato, pacote errado esperado pelo servidor.
                     if eop_correto == True:
@@ -290,7 +314,7 @@ def main():
                         com1.rx.clearBuffer()
                         time.sleep(0.01)
                         
-                if tipo == 5:
+                elif tipo == 5:
                     print('É TIPO 5')
                     print('TIMEOUT CLIENT')
                     print('-'*30)
@@ -299,7 +323,7 @@ def main():
                     com1.disable()
                     sys.exit()
                 
-                else:
+                elif tipo != 3 and tipo != 5:
                     print('TIPO DA MENSAGEM ESTÁ ERRADA : {}'.format(tipo))
                     print('-'*30)
                     time.sleep(0.01)
@@ -311,6 +335,7 @@ def main():
                 
                 mensagem_tipo6 = datagram_head(6, 0, 0, 0, cont, 0) + datagram_eop()
                 com1.sendData(mensagem_tipo6)
+                print("mandou mensagem tipo 6")
                 time.sleep(0.01)
                 
                 com1.rx.clearBuffer()
