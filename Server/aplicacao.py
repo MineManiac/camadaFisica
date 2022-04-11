@@ -42,6 +42,7 @@ from enlace import *
 import time
 import numpy as np
 import sys
+import datetime
 
 
 
@@ -149,6 +150,25 @@ def checa_eop(eop):
         #print("passou o eop incorreto")
         return False
     
+def get_timestamp():
+    now = datetime.datetime.now()
+    timestamp = now.strftime("%d/%m/%Y %H:%M:%S.%f")[:-3]
+    print(timestamp)
+    return timestamp
+
+def cria_log(timestamp, tipo_comunicacao, tipo_mensagem, tamanho_bytes_total, pacote_enviado, total_pacotes):
+    log = timestamp + " " + tipo_comunicacao + f"/{tipo_mensagem}" + f"/{tamanho_bytes_total}"
+    if tipo_mensagem == 3:
+        log += f"/{pacote_enviado}" + f"/{total_pacotes}"
+    return log
+    
+def cria_log_file(lista_logs):
+    with open("Server1.txt", "w") as logs_file:
+        for log in lista_logs:
+            logs_file.write(log + "\n")
+            
+            
+    
 
 
 def main():
@@ -174,6 +194,7 @@ def main():
         
         #time.sleep(30)
         
+        log_total = []
         
         
         ocioso = True
@@ -190,12 +211,19 @@ def main():
                 print("recebeu HEAD")
                 print("-"*30)
                 print(tipo1_head)
+                
                 tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(tipo1_head)
+
+                
                 
                 if tipo_mensagem == 1:
                     #EOP do handshake
                     print("É tipo mensagem 1")
                     print("-"*30)
+                    
+                    log = cria_log(get_timestamp(), "/receb", tipo_mensagem, tamanho_payload+14, numero_pacote, numero_total_pacotes)
+                    log_total += log
+                    
                     tipo1_eop,_= com1.getData(4)
                     checa = checa_eop(tipo1_eop)
                     
@@ -224,6 +252,9 @@ def main():
         mensagem_tipo2 = datagram_head(2, numero_total_pacotes, 0, tamanho_payload, 0, 0) + datagram_eop()
         com1.sendData(mensagem_tipo2)
         time.sleep(.01)
+        
+        log = cria_log(get_timestamp(), "/envio", 2, tamanho_payload+14, numero_pacote, numero_total_pacotes)
+        log_total += log
         
         
         
@@ -266,6 +297,10 @@ def main():
                         mensagem_tipo5 = datagram_head(5, 0, 0, 0, 0, 0) + datagram_eop()
                         com1.sendData(mensagem_tipo5)
                         time.sleep(0.01)
+                        
+                        log = cria_log(get_timestamp(), "/envio", 5, tamanho_payload+14, numero_pacote, numero_total_pacotes)
+                        log_total += log
+                        
                         com1.disable()
                         sys.exit()
                     
@@ -280,6 +315,11 @@ def main():
                     print("-"*30)
                     mensagem_tipo4 = datagram_head(4, 0, 0, 0, 0, cont-1) + datagram_eop()
                     com1.sendData(mensagem_tipo4)
+                    
+                    log = cria_log(get_timestamp(), "/envio", 4, tamanho_payload+14, cont-1, numero_total_pacotes)
+                    log_total += log
+                    
+                    
                     time.sleep(0.01)
                     timer1_inicio = time.perf_counter()
                     
@@ -293,10 +333,15 @@ def main():
             
             
             tipo, numero_total_pacotes, numero_pacote, payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(head)
+            
+            
+            
             print("contador {}".format(cont))
             print("pacote recebido antes de comparar = {} ".format(numero_pacote))
             if numero_pacote == cont:
                 if tipo == 3:
+                    log = cria_log(get_timestamp(), "/receb", 3, tamanho_payload+14, numero_pacote, numero_total_pacotes)
+                    log_total += log
                     print('É TIPO 3')
                     print('-'*30)
                     
@@ -317,6 +362,9 @@ def main():
                         com1.sendData(mensagem_tipo4)
                         time.sleep(0.01)
                         
+                        log = cria_log(get_timestamp(), "/envio", 4, tamanho_payload+14, numero_pacote, numero_total_pacotes)
+                        log_total += log
+                        
                         cont += 1
                         
                     if eop_correto == False:
@@ -327,6 +375,9 @@ def main():
                         com1.sendData(mensagem_tipo6)
                         time.sleep(0.01)
                         
+                        log = cria_log(get_timestamp(), "/envio", 6, tamanho_payload+14, numero_pacote, numero_total_pacotes)
+                        log_total += log
+                        
                         com1.rx.clearBuffer()
                         time.sleep(0.01)
                         
@@ -335,6 +386,9 @@ def main():
                     print('TIMEOUT CLIENT')
                     print('-'*30)
                     
+                    log = cria_log(get_timestamp(), "/envio", 5, tamanho_payload+14, numero_pacote, numero_total_pacotes)
+                    log_total += log
+                    
                     time.sleep(0.01)
                     com1.disable()
                     sys.exit()
@@ -342,6 +396,10 @@ def main():
                 elif tipo != 3 and tipo != 5:
                     print('TIPO DA MENSAGEM ESTÁ ERRADA : {}'.format(tipo))
                     print('-'*30)
+                    
+                    log = cria_log(get_timestamp(), "/envio", tipo, tamanho_payload+14, numero_pacote, numero_total_pacotes)
+                    log_total += log
+                    
                     time.sleep(0.01)
                     com1.disable()
                     sys.exit()
@@ -353,6 +411,10 @@ def main():
                 
                 mensagem_tipo6 = datagram_head(6, 0, 0, 0, cont, 0) + datagram_eop()
                 com1.sendData(mensagem_tipo6)
+                
+                log = cria_log(get_timestamp(), "/envio", 6, tamanho_payload+14, cont, numero_total_pacotes)
+                log_total += log
+                    
                 print("mandou mensagem tipo 6")
                 time.sleep(0.01)
                 
@@ -371,6 +433,8 @@ def main():
         f = open(write_image, "wb")
         f.write(imagem_recebida)
         f.close()
+        
+        write_log = cria_log_file(log_total)
         
     
         # Encerra comunicação
