@@ -53,7 +53,7 @@ import sys
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM5"                  # Windows(variacao de)
+serialName = "COM3"                  # Windows(variacao de)
 
 
 def decifra_head(head):
@@ -156,7 +156,7 @@ def main():
         
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM5')
+        com1 = enlace('COM3')
         
         com1.rx.clearBuffer()
         time.sleep(0.01)
@@ -183,33 +183,36 @@ def main():
             print("-"*30)
             
             # Recebe Handshake do cliente
-            tipo1_head,_ = com1.getData(10)
-            print("recebeu HEAD")
-            print("-"*30)
-            print(tipo1_head)
+            tipo1_head,size = com1.getData(10)
             
             # Decifra o head para saber se é handshake ou n
-            tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(tipo1_head)
-            
-            if tipo_mensagem == 1:
-                #EOP do handshake
-                print("É tipo mensagem 1")
+            if size > 0:
+                print("recebeu HEAD")
                 print("-"*30)
-                tipo1_eop,_= com1.getData(4)
-                checa = checa_eop(tipo1_eop)
+                print(tipo1_head)
+                tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(tipo1_head)
                 
-                if checa == True:
-                    print("EOP CORRETO")
+                if tipo_mensagem == 1:
+                    #EOP do handshake
+                    print("É tipo mensagem 1")
                     print("-"*30)
-                    ocioso = False
-                    time.sleep(1)
+                    tipo1_eop,_= com1.getData(4)
+                    checa = checa_eop(tipo1_eop)
                     
-                if checa == False:
-                    print("EOP INCORRETO")
-                    print("-"*30)
-                    pass
+                    if checa == True:
+                        print("EOP CORRETO")
+                        print("-"*30)
+                        ocioso = False
+                        time.sleep(1)
+                        
+                    if checa == False:
+                        print("EOP INCORRETO")
+                        print("-"*30)
+                        pass
                 
             else:
+                print("nao recebeu nada")
+                print("-"*30)
                 time.sleep(1)
                 pass
         
@@ -239,36 +242,48 @@ def main():
         timer2_inicio = time.perf_counter()
         
         #LOOP PEGANDO OS DADOS RECEBIDOS
-        while cont <= numero_total_pacotes:
-            timer2 = time.perf_counter() - timer2_inicio
-            timer1 = time.perf_counter() - timer1_inicio
-            
+        while cont <= numero_total_pacotes:            
             print("NUMERO PACOTE {} / TOTAL DE PACOTE {}".format(cont, numero_total_pacotes))
             print("-"*30)
             
             pegou_dados = False
             
-            while not pegou_dados:
+            while pegou_dados == False:
+                
                 head,size= com1.getData(10)
                 
-                if :
+                if size == 0:                    
+                    timer2_final = time.perf_counter()
+                    timer2 = timer2_final - timer2_inicio
+                    
+                    if timer2 > 20:
+                        print('Entrou no caso de Passar 20 segundos')
+                        print('-'*30)
+                        print("Time Out")
+                        print("Encerrando comunicação :-(")
+                        
+                        ocioso = True
+                        mensagem_tipo5 = datagram_head(5, 0, 0, 0, 0, 0) + datagram_eop()
+                        com1.sendData(mensagem_tipo5)
+                        time.sleep(0.01)
+                        com1.disable()
+                        sys.exit()
+                    
+                    
+                    print("Não recebeu mensagem")
+                    print("-"*30)
+                    
+                    time.sleep(1)
                     print('Entrou no caso de Passar 2 segundos')
                     print('-'*30)
-                    
+                    print("Transmitindo Tipo4")
+                    print("-"*30)
                     mensagem_tipo4 = datagram_head(4, 0, 0, 0, 0, cont-1) + datagram_eop()
                     com1.sendData(mensagem_tipo4)
                     time.sleep(0.01)
-                
-                elif (head == 255) and (size == 1):
-                    print('Entrou no caso de Passar 20 segundos')
-                    print('-'*30)
+                    timer1_inicio = time.perf_counter()
                     
-                    ocioso = True
-                    mensagem_tipo5 = datagram_head(5, 0, 0, 0, 0, 0) + datagram_eop()
-                    com1.sendData(mensagem_tipo5)
-                    time.sleep(0.01)
-                    com1.disable()
-                    sys.exit()
+
                     
                     
                 elif (size == 10):
@@ -279,6 +294,7 @@ def main():
             
             tipo, numero_total_pacotes, numero_pacote, payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(head)
             print("contador {}".format(cont))
+            print("pacote recebido antes de comparar = {} ".format(numero_pacote))
             if numero_pacote == cont:
                 if tipo == 3:
                     print('É TIPO 3')
@@ -331,6 +347,8 @@ def main():
                     sys.exit()
             else:
                 print("Numero do PACOTE Está ERRADO")
+                print("contador = {} ".format(cont))
+                print("pacote recebido = {} ".format(numero_pacote))
                 print('-'*30)
                 
                 mensagem_tipo6 = datagram_head(6, 0, 0, 0, cont, 0) + datagram_eop()
