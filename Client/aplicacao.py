@@ -41,6 +41,7 @@ from enlace import *
 import time
 #import numpy as np
 import sys
+import datetime
 
 # Voce deverá descomentar e configurar a porta com através da qual ira fazer comunicação.
 # Para saber a sua porta, execute no terminal :
@@ -50,7 +51,7 @@ import sys
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM3"                  # Windows(variacao de)
+serialName = "COM4"                  # Windows(variacao de)
 
 def datagram_head(tipo, total_pacotes, n_pacote, tamanho_payload, pacote_erro, pacote_sucesso):
     
@@ -121,6 +122,23 @@ def checa_eop(eop):
         return True
     else:
         return False
+
+def get_timestamp():
+    now = datetime.datetime.now()
+    timestamp = now.strftime("%d/%m/%Y %H:%M:%S.%f")[:-3]
+    print(timestamp)
+    return timestamp
+
+def cria_log(timestamp, tipo_comunicacao, tipo_mensagem, tamanho_bytes_total, pacote_enviado, total_pacotes):
+    log = timestamp + " " + tipo_comunicacao + f"/{tipo_mensagem}" + f"/{tamanho_bytes_total}"
+    if tipo_mensagem == 3:
+        log += f"/{pacote_enviado}" + f"/{total_pacotes}"
+    return log
+    
+def cria_log_file(lista_logs):
+    with open("Client1.txt", "w") as logs_file:
+        for log in lista_logs:
+            logs_file.write(log + "\n")
     
 def main():
     try:
@@ -134,6 +152,7 @@ def main():
         # Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
         print(f'com1 = {com1}')
         print("-"*30)
+        com1.rx.clearBuffer()
         
         # Aqui você deverá gerar os dados a serem transmitidos. 
         # Seus dados a serem transmitidos são uma lista de bytes a serem transmitidos.
@@ -181,7 +200,11 @@ def main():
             elif i == total_pacotes-1:
                 lista_bytes_envio = img_bytes_lista[i_lista_inicial:]
                 lista_payloads.append(lista_bytes_envio)
-            
+       
+        # Iniciando lista de logs
+        print("Inicializando lista de logs")
+        print("-"*30)
+        lista_logs = []
         # Iniciando comunicação com Server
         print("Iniciando comunicação")
         print("-"*30)
@@ -191,9 +214,18 @@ def main():
             print("-"*30)
             # Handshake
             # O Client precisa mandar um handshake para saber se o Server está online
-            # Criando head e eop do pacote Handshake (sem payload)
-            txBuffer_handshake = datagram_head(1, total_pacotes, 0, 0, 0, 0) + datagram_eop()
+            # Criando head e eop do pacote Handshake (sem payload ou payload = 0)
+            tipo_mensagem = 1
+            tamanho_payload = 0
+            pacote_enviado = 0
+            total_pacotes = 0
+            timestamp = get_timestamp()
+            tipo_comunicacao = "/envio"
+            tamanho_bytes_total = 14 + tamanho_payload
+            txBuffer_handshake = datagram_head(tipo_mensagem, total_pacotes, pacote_enviado, tamanho_payload, 0, 0) + datagram_eop()
             com1.sendData(txBuffer_handshake)
+            novo_log = cria_log(timestamp, tipo_comunicacao, tipo_mensagem, tamanho_bytes_total, pacote_enviado, total_pacotes)
+            lista_logs.append(novo_log)
             time.sleep(0.01)
             
             print("Esperando dados")
@@ -201,13 +233,12 @@ def main():
             rxBuffer_head, nRx = com1.getData(10)
             head_recebido = decifra_head(rxBuffer_head)
             rxBuffer_eop, _ = com1.getData(4)
-            
+            print(f"Tipo da mensagem = {head_recebido[0]}")
+            print("-"*30)
             if head_recebido[0] == 2:
                 break            
             else:
                 time.sleep(5)
-        
-        time.sleep(30)
         
         # Mudar cont para outro valor quando quiser forçar um erro na ordem dos pacotes enviados pelo client
         cont = 1
@@ -229,12 +260,12 @@ def main():
             h5 – se tipo for dados: tamanho do payload
             h6 – pacote solicitado para recomeço quando a erro no envio.
             h7 – último pacote recebido com sucesso.
-            h8 – h9 – CRC
+            h8 e h9 – CRC
             PAYLOAD – variável entre 0 e 114 bytes. Reservado à transmissão dos arquivos.
             EOP – 4 bytes: 0xAA 0xBB 0xCC 0xDD
 
 
-            TIPO 1 - HANDSHAKE h0 CLIENTE SERVIDOR- 1, IDENTIFICADOR DO SERVIDOR A GENTE ESCOLHE PODE SER 1, PRECISA CONTER O NUMERO TOTAL DE PACOTES 
+            TIPO 1 - HANDSHAKE h0 CLIENTE SERVIDOR - 1, IDENTIFICADOR DO SERVIDOR A GENTE ESCOLHE PODE SER 1, PRECISA CONTER O NUMERO TOTAL DE PACOTES 
             TIPO 2 - RESPOSTA DO SERVIDOR CLIENTE h0 - 2, id tipo 1 deve ser correto
             TIPO 3 - MANDAR DADOS CLIENTE SERVIDOR h0 - 3, Payload, numero do pacote, numero total de pacotes
             TIPO 4 - CHECANDO DADOS PARA VER SE ESTÁ CERTO SERVIDOR CLIENTE h0 - 4 - verificar pacote, 
@@ -245,13 +276,20 @@ def main():
             TIPO 6 - Mensagem de erro SERVIDOR CLIENTE h0 - 6, tipo 3 inválida, bytes faltando, fora do formato, pacote errado esperado pelo servidor.
             Contém o número correto do pacote esperado pelo servidor h6, orientando o cliente para o reenvio. 
             '''
+            tipo_mensagem = 3
+            pacote_enviado = cont
+            timestamp = get_timestamp()
+            tipo_comunicacao = "/envio"
+            tamanho_bytes_total = 14 + tamanho_payload
+            novo_log = cria_log(timestamp, tipo_comunicacao, tipo_mensagem, tamanho_bytes_total, pacote_enviado, total_pacotes)
+            lista_logs.append(novo_log)
             
             # PAYLOAD - 0 a 114 bytes
             # Array de bytes que compõem a imagem que está sendo enviada
             txBuffer_payload, tamanho_payload = datagram_payload(lista_payloads[cont-1])
                 
             # HEAD - 10 bytes
-            txBuffer_head = datagram_head(3, total_pacotes, cont, tamanho_payload, 0, 0)
+            txBuffer_head = datagram_head(tipo_mensagem, total_pacotes, cont, tamanho_payload, 0, 0)
 
             # EOP - 4 bytes
             txBuffer_eop = datagram_eop()
@@ -311,7 +349,8 @@ def main():
                     rxBuffer_payload = com1.getData(head_decifrado[3])
                     rxBuffer_eop, nRx = com1.getData(4)
                     
-                    print(f"Pacote solicitado = {head_decifrado[4]}")
+                    print(f"Pacote solicitado pelo Server = {head_decifrado[4]}")
+                    print("-"*30)
                     cont = head_decifrado[4]
                     print("Transmitindo o Datagrama solicitado")
                     print("-"*30)
