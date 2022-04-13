@@ -136,7 +136,7 @@ def cria_log(timestamp, tipo_comunicacao, tipo_mensagem, tamanho_bytes_total, pa
     return log
     
 def cria_log_file(lista_logs):
-    with open("Client1.txt", "w") as logs_file:
+    with open("Client_teste.txt", "w") as logs_file:
         for log in lista_logs:
             logs_file.write(log + "\n")
     
@@ -209,6 +209,10 @@ def main():
         print("Iniciando comunicação")
         print("-"*30)
         inicia = False
+        
+        # Definindo variáveis gerais para os logs
+        tipo_comunicacao_receb = "/receb"
+        tipo_comunicacao_envio = "/envio"
         while not inicia:
             print("Tentando enviar handshake para o Server")
             print("-"*30)
@@ -219,24 +223,31 @@ def main():
             tamanho_payload = 0
             pacote_enviado = 0
             total_pacotes = 0
-            timestamp = get_timestamp()
-            tipo_comunicacao = "/envio"
             tamanho_bytes_total = 14 + tamanho_payload
             txBuffer_handshake = datagram_head(tipo_mensagem, total_pacotes, pacote_enviado, tamanho_payload, 0, 0) + datagram_eop()
             com1.sendData(txBuffer_handshake)
-            novo_log = cria_log(timestamp, tipo_comunicacao, tipo_mensagem, tamanho_bytes_total, pacote_enviado, total_pacotes)
+            timestamp = get_timestamp()
+            novo_log = cria_log(timestamp, tipo_comunicacao_envio, tipo_mensagem, tamanho_bytes_total, pacote_enviado, total_pacotes)
             lista_logs.append(novo_log)
             time.sleep(0.01)
             
-            print("Esperando dados")
+            print("Esperando handshake")
             print("-"*30)
             rxBuffer_head, nRx = com1.getData(10)
-            head_recebido = decifra_head(rxBuffer_head)
+            tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(rxBuffer_head)
             rxBuffer_eop, _ = com1.getData(4)
-            print(f"Tipo da mensagem = {head_recebido[0]}")
+            tamanho_bytes_total = 14 + tamanho_payload
+            timestamp = get_timestamp()
+            novo_log = cria_log(timestamp, tipo_comunicacao_receb, tipo_mensagem, tamanho_bytes_total, 0, 0)
+            lista_logs.append(novo_log)
+            print(f"Tipo da mensagem = {tipo_mensagem}")
             print("-"*30)
-            if head_recebido[0] == 2:
-                break            
+            tamanho_bytes_total = 14 + tamanho_payload
+            timestamp = get_timestamp()
+            novo_log = cria_log(timestamp, tipo_comunicacao_receb, tipo_mensagem, tamanho_bytes_total, 0, 0)
+            lista_logs.append(novo_log)
+            if tipo_mensagem == 2:
+                break      
             else:
                 time.sleep(5)
         
@@ -276,19 +287,14 @@ def main():
             TIPO 6 - Mensagem de erro SERVIDOR CLIENTE h0 - 6, tipo 3 inválida, bytes faltando, fora do formato, pacote errado esperado pelo servidor.
             Contém o número correto do pacote esperado pelo servidor h6, orientando o cliente para o reenvio. 
             '''
-            tipo_mensagem = 3
-            pacote_enviado = cont
-            timestamp = get_timestamp()
-            tipo_comunicacao = "/envio"
-            tamanho_bytes_total = 14 + tamanho_payload
-            novo_log = cria_log(timestamp, tipo_comunicacao, tipo_mensagem, tamanho_bytes_total, pacote_enviado, total_pacotes)
-            lista_logs.append(novo_log)
+            
             
             # PAYLOAD - 0 a 114 bytes
             # Array de bytes que compõem a imagem que está sendo enviada
             txBuffer_payload, tamanho_payload = datagram_payload(lista_payloads[cont-1])
                 
             # HEAD - 10 bytes
+            tipo_mensagem_com = 3
             txBuffer_head = datagram_head(tipo_mensagem, total_pacotes, cont, tamanho_payload, 0, 0)
 
             # EOP - 4 bytes
@@ -299,6 +305,12 @@ def main():
             print("-"*30)
             txBuffer = txBuffer_head + txBuffer_payload + txBuffer_eop
             com1.sendData(txBuffer)
+            
+            tamanho_bytes_total_com = 14 + tamanho_payload
+            timestamp = get_timestamp()
+            novo_log = cria_log(timestamp, tipo_comunicacao_envio, tipo_mensagem_com, tamanho_bytes_total_com, cont, total_pacotes)
+            lista_logs.append(novo_log)
+            
             time.sleep(0.01)
             
             # Tentativa de receber a mensagem de feedback do Server
@@ -310,11 +322,13 @@ def main():
                 print("Esperando mensagem de feedback")
                 print("-"*30)
                 rxBuffer_head, nRx = com1.getData(10)
-                head_decifrado = decifra_head(rxBuffer_head)
                 print(f"Tamanho do head recebido = {nRx}")
                 print("-"*30)
                 print(f"Head recebido = {rxBuffer_head}")
                 print("-"*30)
+                head_decifrado = decifra_head(rxBuffer_head)
+                tipo_mensagem = head_decifrado[0]
+                tamanho_payload = head_decifrado[3]
                 time.sleep(0.01)
                             
                 if nRx == 0:
@@ -327,6 +341,9 @@ def main():
                         print("Transmitindo novamente o Datagrama")
                         print("-"*30)
                         com1.sendData(txBuffer)
+                        timestamp = get_timestamp()
+                        novo_log = cria_log(timestamp, tipo_comunicacao_envio, tipo_mensagem_com, tamanho_bytes_total_com, cont, total_pacotes)
+                        lista_logs.append(novo_log)
                         time.sleep(0.01)
                         momento_inicial_1 = time.perf_counter()
                       
@@ -335,19 +352,29 @@ def main():
                     if timer_2 > 20:
                         print("Time Out")
                         # Envia mensagem de time out
-                        txBuffer_timeout_head = datagram_head(5, 0, 0, 0, 0, 0)
+                        tipo_mensagem = 5
+                        txBuffer_timeout_head = datagram_head(tipo_mensagem, 0, 0, 0, 0, 0)
                         txBuffer_timeout_eop = datagram_eop()
                         txBuffer = txBuffer_timeout_head + txBuffer_timeout_eop
                         com1.sendData(txBuffer)
+                        tamanho_bytes_total = 14
+                        timestamp = get_timestamp()
+                        novo_log = cria_log(timestamp, tipo_comunicacao_envio, tipo_mensagem, tamanho_bytes_total, 0, 0)
+                        lista_logs.append(novo_log)
                         time.sleep(0.01)
                         print("Encerrando comunicação :-(")
+                        cria_log_file(lista_logs)
                         com1.disable()
                         sys.exit()
                     
-                elif head_decifrado[0] == 6:
+                elif tipo_mensagem == 6:
                     # Tenta captar mensagem de erro do Server                       
-                    rxBuffer_payload = com1.getData(head_decifrado[3])
+                    rxBuffer_payload = com1.getData(tamanho_payload)
                     rxBuffer_eop, nRx = com1.getData(4)
+                    tamanho_bytes_total = 14 + tamanho_payload
+                    timestamp = get_timestamp()
+                    novo_log = cria_log(timestamp, tipo_comunicacao_receb, tipo_mensagem, tamanho_bytes_total, 0, 0)
+                    lista_logs.append(novo_log)
                     
                     print(f"Pacote solicitado pelo Server = {head_decifrado[4]}")
                     print("-"*30)
@@ -360,7 +387,8 @@ def main():
                     txBuffer_payload, tamanho_payload = datagram_payload(lista_payloads[cont-1])
                         
                     # HEAD - 10 bytes
-                    txBuffer_head = datagram_head(3, total_pacotes, cont, tamanho_payload, 0, 0)
+                    tipo_mensagem = 3
+                    txBuffer_head = datagram_head(tipo_mensagem, total_pacotes, cont, tamanho_payload, 0, 0)
 
                     # EOP - 4 bytes
                     txBuffer_eop = datagram_eop()
@@ -370,6 +398,10 @@ def main():
                     print("-"*30)
                     txBuffer = txBuffer_head + txBuffer_payload + txBuffer_eop
                     com1.sendData(txBuffer)
+                    tamanho_bytes_total = 14 + tamanho_payload
+                    timestamp = get_timestamp()
+                    novo_log = cria_log(timestamp, tipo_comunicacao_envio, tipo_mensagem, tamanho_bytes_total, cont, total_pacotes)
+                    lista_logs.append(novo_log)
                     time.sleep(0.01)
                     
                     # Resetando timers
@@ -380,9 +412,13 @@ def main():
                     # Quer dizer que recebeu mensagem
                     # Continua captando os dados da mensagem
                     
-                    rxBuffer_payload = com1.getData(head_decifrado[3])
+                    rxBuffer_payload = com1.getData(tamanho_payload)
                     time.sleep(0.01)
                     rxBuffer_eop, nRx = com1.getData(4)
+                    tamanho_bytes_total = 14 + tamanho_payload
+                    timestamp = get_timestamp()
+                    novo_log = cria_log(timestamp, tipo_comunicacao_receb, tipo_mensagem, tamanho_bytes_total, 0, 0)
+                    lista_logs.append(novo_log)
                     time.sleep(0.01)
                     cont += 1
                     recebeu_mensagem = True
@@ -391,6 +427,7 @@ def main():
         # Encerra comunicação
         print("Comunicação encerrada")
         print("-"*30)
+        cria_log_file(lista_logs)
         com1.disable()
         
     except Exception as erro:
