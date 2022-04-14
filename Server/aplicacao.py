@@ -302,7 +302,7 @@ def main():
                         
                         log = cria_log(get_timestamp(), "/envio", 5, tamanho_payload+14, numero_pacote, numero_total_pacotes)
                         log_total.append(log)
-                        cria_log_file(log_total)
+                        #cria_log_file(log_total)
                         
                         com1.disable()
                         sys.exit()
@@ -391,7 +391,7 @@ def main():
                     
                     log = cria_log(get_timestamp(), "/envio", 5, tamanho_payload+14, numero_pacote, numero_total_pacotes)
                     log_total.append(log)
-                    cria_log_file(log_total)
+                    #cria_log_file(log_total)
                     
                     time.sleep(0.01)
                     com1.disable()
@@ -403,7 +403,7 @@ def main():
                     
                     log = cria_log(get_timestamp(), "/envio", tipo, tamanho_payload+14, numero_pacote, numero_total_pacotes)
                     log_total.append(log)
-                    cria_log_file(log_total)
+                    #cria_log_file(log_total)
                     
                     time.sleep(0.01)
                     com1.disable()
@@ -439,7 +439,7 @@ def main():
         f.write(imagem_recebida)
         f.close()
         
-        cria_log_file(log_total)
+        #cria_log_file(log_total)
         
     
         # Encerra comunicação
