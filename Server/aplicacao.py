@@ -153,7 +153,6 @@ def checa_eop(eop):
 def get_timestamp():
     now = datetime.datetime.now()
     timestamp = now.strftime("%d/%m/%Y %H:%M:%S.%f")[:-3]
-    print(timestamp)
     return timestamp
 
 def cria_log(timestamp, tipo_comunicacao, tipo_mensagem, tamanho_bytes_total, pacote_enviado, total_pacotes):
@@ -163,7 +162,7 @@ def cria_log(timestamp, tipo_comunicacao, tipo_mensagem, tamanho_bytes_total, pa
     return log
     
 def cria_log_file(lista_logs):
-    with open("Server1.txt", "w") as logs_file:
+    with open("Server4.txt", "w") as logs_file:
         for log in lista_logs:
             logs_file.write(log + "\n")
             
@@ -190,11 +189,10 @@ def main():
         print("A Recepção do Handshake vai comecar")
         print("-"*30)
         
+        #TIME SLEEP 3
+        #time.sleep(20)
         
-        
-        #time.sleep(30)
-        
-        log_total = []
+        log_total = []  
         
         
         ocioso = True
@@ -222,7 +220,7 @@ def main():
                     print("-"*30)
                     
                     log = cria_log(get_timestamp(), "/receb", tipo_mensagem, tamanho_payload+14, numero_pacote, numero_total_pacotes)
-                    log_total += log
+                    log_total.append(log)
                     
                     tipo1_eop,_= com1.getData(4)
                     checa = checa_eop(tipo1_eop)
@@ -254,7 +252,7 @@ def main():
         time.sleep(.01)
         
         log = cria_log(get_timestamp(), "/envio", 2, tamanho_payload+14, numero_pacote, numero_total_pacotes)
-        log_total += log
+        log_total.append(log)
         
         
         
@@ -272,12 +270,16 @@ def main():
         timer1_inicio = time.perf_counter()
         timer2_inicio = time.perf_counter()
         
+        #NAO PEGA DADOS TIMEOUT
+        time.sleep(23)
+        
         #LOOP PEGANDO OS DADOS RECEBIDOS
         while cont <= numero_total_pacotes:            
             print("NUMERO PACOTE {} / TOTAL DE PACOTE {}".format(cont, numero_total_pacotes))
             print("-"*30)
             
             pegou_dados = False
+
             
             while pegou_dados == False:
                 
@@ -299,7 +301,8 @@ def main():
                         time.sleep(0.01)
                         
                         log = cria_log(get_timestamp(), "/envio", 5, tamanho_payload+14, numero_pacote, numero_total_pacotes)
-                        log_total += log
+                        log_total.append(log)
+                        cria_log_file(log_total)
                         
                         com1.disable()
                         sys.exit()
@@ -317,7 +320,7 @@ def main():
                     com1.sendData(mensagem_tipo4)
                     
                     log = cria_log(get_timestamp(), "/envio", 4, tamanho_payload+14, cont-1, numero_total_pacotes)
-                    log_total += log
+                    log_total.append(log)
                     
                     
                     time.sleep(0.01)
@@ -333,6 +336,8 @@ def main():
             
             
             tipo, numero_total_pacotes, numero_pacote, payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(head)
+            log = cria_log(get_timestamp(), "/receb", tipo, tamanho_payload+14, numero_pacote, numero_total_pacotes)
+            log_total.append(log)
             
             
             
@@ -340,8 +345,6 @@ def main():
             print("pacote recebido antes de comparar = {} ".format(numero_pacote))
             if numero_pacote == cont:
                 if tipo == 3:
-                    log = cria_log(get_timestamp(), "/receb", 3, tamanho_payload+14, numero_pacote, numero_total_pacotes)
-                    log_total += log
                     print('É TIPO 3')
                     print('-'*30)
                     
@@ -363,7 +366,7 @@ def main():
                         time.sleep(0.01)
                         
                         log = cria_log(get_timestamp(), "/envio", 4, tamanho_payload+14, numero_pacote, numero_total_pacotes)
-                        log_total += log
+                        log_total.append(log)
                         
                         cont += 1
                         
@@ -376,7 +379,7 @@ def main():
                         time.sleep(0.01)
                         
                         log = cria_log(get_timestamp(), "/envio", 6, tamanho_payload+14, numero_pacote, numero_total_pacotes)
-                        log_total += log
+                        log_total.append(log)
                         
                         com1.rx.clearBuffer()
                         time.sleep(0.01)
@@ -387,7 +390,8 @@ def main():
                     print('-'*30)
                     
                     log = cria_log(get_timestamp(), "/envio", 5, tamanho_payload+14, numero_pacote, numero_total_pacotes)
-                    log_total += log
+                    log_total.append(log)
+                    cria_log_file(log_total)
                     
                     time.sleep(0.01)
                     com1.disable()
@@ -398,7 +402,8 @@ def main():
                     print('-'*30)
                     
                     log = cria_log(get_timestamp(), "/envio", tipo, tamanho_payload+14, numero_pacote, numero_total_pacotes)
-                    log_total += log
+                    log_total.append(log)
+                    cria_log_file(log_total)
                     
                     time.sleep(0.01)
                     com1.disable()
@@ -413,7 +418,7 @@ def main():
                 com1.sendData(mensagem_tipo6)
                 
                 log = cria_log(get_timestamp(), "/envio", 6, tamanho_payload+14, cont, numero_total_pacotes)
-                log_total += log
+                log_total.append(log)
                     
                 print("mandou mensagem tipo 6")
                 time.sleep(0.01)
@@ -434,7 +439,7 @@ def main():
         f.write(imagem_recebida)
         f.close()
         
-        write_log = cria_log_file(log_total)
+        cria_log_file(log_total)
         
     
         # Encerra comunicação
