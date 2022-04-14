@@ -126,7 +126,6 @@ def checa_eop(eop):
 def get_timestamp():
     now = datetime.datetime.now()
     timestamp = now.strftime("%d/%m/%Y %H:%M:%S.%f")[:-3]
-    print(timestamp)
     return timestamp
 
 def cria_log(timestamp, tipo_comunicacao, tipo_mensagem, tamanho_bytes_total, pacote_enviado, total_pacotes):
@@ -136,7 +135,7 @@ def cria_log(timestamp, tipo_comunicacao, tipo_mensagem, tamanho_bytes_total, pa
     return log
     
 def cria_log_file(lista_logs):
-    with open("Client_teste.txt", "w") as logs_file:
+    with open("Client4.txt", "w") as logs_file:
         for log in lista_logs:
             logs_file.write(log + "\n")
     
@@ -220,14 +219,11 @@ def main():
             # O Client precisa mandar um handshake para saber se o Server está online
             # Criando head e eop do pacote Handshake (sem payload ou payload = 0)
             tipo_mensagem = 1
-            tamanho_payload = 0
-            pacote_enviado = 0
-            total_pacotes = 0
-            tamanho_bytes_total = 14 + tamanho_payload
-            txBuffer_handshake = datagram_head(tipo_mensagem, total_pacotes, pacote_enviado, tamanho_payload, 0, 0) + datagram_eop()
+            tamanho_bytes_total = 14
+            txBuffer_handshake = datagram_head(tipo_mensagem, total_pacotes, 0, 0, 0, 0) + datagram_eop()
             com1.sendData(txBuffer_handshake)
             timestamp = get_timestamp()
-            novo_log = cria_log(timestamp, tipo_comunicacao_envio, tipo_mensagem, tamanho_bytes_total, pacote_enviado, total_pacotes)
+            novo_log = cria_log(timestamp, tipo_comunicacao_envio, tipo_mensagem, tamanho_bytes_total, 0, 0)
             lista_logs.append(novo_log)
             time.sleep(0.01)
             
@@ -235,23 +231,20 @@ def main():
             print("-"*30)
             rxBuffer_head, nRx = com1.getData(10)
             tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc = decifra_head(rxBuffer_head)
-            rxBuffer_eop, _ = com1.getData(4)
-            tamanho_bytes_total = 14 + tamanho_payload
-            timestamp = get_timestamp()
-            novo_log = cria_log(timestamp, tipo_comunicacao_receb, tipo_mensagem, tamanho_bytes_total, 0, 0)
-            lista_logs.append(novo_log)
+                        
             print(f"Tipo da mensagem = {tipo_mensagem}")
             print("-"*30)
-            tamanho_bytes_total = 14 + tamanho_payload
-            timestamp = get_timestamp()
-            novo_log = cria_log(timestamp, tipo_comunicacao_receb, tipo_mensagem, tamanho_bytes_total, 0, 0)
-            lista_logs.append(novo_log)
             if tipo_mensagem == 2:
+                rxBuffer_eop, _ = com1.getData(4)
+                tamanho_bytes_total = 14 + tamanho_payload
+                timestamp = get_timestamp()
+                novo_log = cria_log(timestamp, tipo_comunicacao_receb, tipo_mensagem, tamanho_bytes_total, 0, 0)
+                lista_logs.append(novo_log)
                 break      
             else:
                 time.sleep(5)
         
-        # Mudar cont para outro valor quando quiser forçar um erro na ordem dos pacotes enviados pelo client
+        # Mudar cont (cont = 1) para outro valor (cont = 2, por exemplo) quando quiser forçar um erro na ordem dos pacotes enviados pelo client (caso 2)
         cont = 1
         print("A transmissão vai começar")   
         print("-"*30)
@@ -295,7 +288,7 @@ def main():
                 
             # HEAD - 10 bytes
             tipo_mensagem_com = 3
-            txBuffer_head = datagram_head(tipo_mensagem, total_pacotes, cont, tamanho_payload, 0, 0)
+            txBuffer_head = datagram_head(tipo_mensagem_com, total_pacotes, cont, tamanho_payload, 0, 0)
 
             # EOP - 4 bytes
             txBuffer_eop = datagram_eop()
