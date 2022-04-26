@@ -92,7 +92,7 @@ def datagram_head(tipo, total_pacotes, n_pacote, tamanho_payload, pacote_erro, p
     
     
     
-    head = h0 + h1 + h2 + h3 + h4 + h5 + h6 + h7 + h8 + h9
+    head = h0 + h1 + h2 + h3 + h4 + h5 + h6 + h7 + h8h9
    
     return head 
 
@@ -249,7 +249,7 @@ def main():
         
         print("Mandando Mensagem tipo 2")
         print("-"*30)
-        mensagem_tipo2 = datagram_head(2, numero_total_pacotes, 0, tamanho_payload, 0, 0) + datagram_eop()
+        mensagem_tipo2 = datagram_head(2, numero_total_pacotes, 0, tamanho_payload, 0, 0, 0) + datagram_eop()
         com1.sendData(mensagem_tipo2)
         time.sleep(.01)
         
@@ -298,7 +298,7 @@ def main():
                         print("Encerrando comunicação :-(")
                         
                         ocioso = True
-                        mensagem_tipo5 = datagram_head(5, 0, 0, 0, 0, 0) + datagram_eop()
+                        mensagem_tipo5 = datagram_head(5, 0, 0, 0, 0, 0, 0) + datagram_eop()
                         com1.sendData(mensagem_tipo5)
                         time.sleep(0.01)
                         
@@ -318,7 +318,7 @@ def main():
                     print('-'*30)
                     print("Transmitindo Tipo4")
                     print("-"*30)
-                    mensagem_tipo4 = datagram_head(4, 0, 0, 0, 0, cont-1) + datagram_eop()
+                    mensagem_tipo4 = datagram_head(4, 0, 0, 0, 0, cont-1, 0) + datagram_eop()
                     com1.sendData(mensagem_tipo4)
                     
                     log = cria_log(get_timestamp(), "/envio", 4, tamanho_payload+14, cont-1, numero_total_pacotes)
@@ -355,15 +355,19 @@ def main():
                     eop,_ = com1.getData(4)
                     
                     eop_correto = checa_eop(eop)
-                    print("EOP VALOR {}".format(eop_correto))
+                    #print("EOP VALOR {}".format(eop_correto))
+                    
+                    payload_correto = checa_crc(payload_tipo3, crc)
+                    #print("EOP VALOR {}".format(eop_correto))
                     
                     #bytes faltando, fora do formato, pacote errado esperado pelo servidor.
-                    if eop_correto == True:
-                        print('EOP ESTÁ CORRETO')
+                    
+                    if eop_correto == True and payload_correto == True:
+                        print('EOP E PAYLOAD CHECK')
                         print('-'*30)
                         imagem_recebida += payload_tipo3
                         
-                        mensagem_tipo4 = datagram_head(4, 0, 0, 0, 0, cont) + datagram_eop()
+                        mensagem_tipo4 = datagram_head(4, 0, 0, 0, 0, cont, 0) + datagram_eop()
                         com1.sendData(mensagem_tipo4)
                         time.sleep(0.01)
                         
@@ -372,11 +376,14 @@ def main():
                         
                         cont += 1
                         
-                    if eop_correto == False:
-                        print('EOP ESTÁ ERRADO, FORA DE FORMATO, PODE HAVER BYTES FALTANDO')
-                        print('-'*30)
-                        
-                        mensagem_tipo6 = datagram_head(6, 0, 0, 0, cont, 0) + datagram_eop()
+                    if eop_correto == False or payload_correto == False:
+                        if eop_correto == False:
+                            print('EOP ESTÁ ERRADO, FORA DE FORMATO')
+                            print('-'*30)
+                        if payload_correto == False:
+                            print('PAYLOAD ESTÁ ERRADO, PODE HAVER BYTES MODIFICADOS')
+                            print('-'*30)
+                        mensagem_tipo6 = datagram_head(6, 0, 0, 0, cont, 0, 0) + datagram_eop()
                         com1.sendData(mensagem_tipo6)
                         time.sleep(0.01)
                         
@@ -416,7 +423,7 @@ def main():
                 print("pacote recebido = {} ".format(numero_pacote))
                 print('-'*30)
                 
-                mensagem_tipo6 = datagram_head(6, 0, 0, 0, cont, 0) + datagram_eop()
+                mensagem_tipo6 = datagram_head(6, 0, 0, 0, cont, 0, 0) + datagram_eop()
                 com1.sendData(mensagem_tipo6)
                 
                 log = cria_log(get_timestamp(), "/envio", 6, tamanho_payload+14, cont, numero_total_pacotes)
