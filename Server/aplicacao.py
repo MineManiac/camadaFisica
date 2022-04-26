@@ -39,6 +39,7 @@ Contém o número correto do pacote esperado pelo servidor h6, orientando o clie
 #para acompanhar a execução e identificar erros, construa prints ao longo do código! 
 
 from enlace import *
+from crc import CrcCalculator, Crc16
 import time
 import numpy as np
 import sys
@@ -77,7 +78,7 @@ def decifra_head(head):
     
     return(tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc)
 
-def datagram_head(tipo, total_pacotes, n_pacote, tamanho_payload, pacote_erro, pacote_sucesso):
+def datagram_head(tipo, total_pacotes, n_pacote, tamanho_payload, pacote_erro, pacote_sucesso, crc):
     
     h0 = tipo.to_bytes(1, byteorder='big')#tipo mensagem
     h1 = b'\x00'
@@ -87,8 +88,7 @@ def datagram_head(tipo, total_pacotes, n_pacote, tamanho_payload, pacote_erro, p
     h5 = tamanho_payload.to_bytes(1,byteorder='big')
     h6 = pacote_erro.to_bytes(1,byteorder='big')#pacote solicitado para reenvio caso erro
     h7 = pacote_sucesso.to_bytes(1,byteorder='big')
-    h8 = b'\x00'
-    h9 = b'\x00'
+    h8h9 = crc.to_bytes(2,byteorder='big')
     
     
     
