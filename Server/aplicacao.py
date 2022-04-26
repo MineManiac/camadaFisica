@@ -167,7 +167,9 @@ def cria_log_file(lista_logs):
             logs_file.write(log + "\n")
             
             
-    
+def checa_crc(payload,crc):
+    crc_calculator = CrcCalculator(Crc16.CCITT)
+    return(crc_calculator.verify_checksum(payload,crc))
 
 
 def main():

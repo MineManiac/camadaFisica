@@ -39,9 +39,10 @@ Contém o número correto do pacote esperado pelo servidor h6, orientando o clie
 
 from enlace import *
 import time
-#import numpy as np
+import numpy as np
 import sys
 import datetime
+from crc import CrcCalculator, Crc16
 
 # Voce deverá descomentar e configurar a porta com através da qual ira fazer comunicação.
 # Para saber a sua porta, execute no terminal :
@@ -138,6 +139,11 @@ def cria_log_file(lista_logs):
     with open("Client4.txt", "w") as logs_file:
         for log in lista_logs:
             logs_file.write(log + "\n")
+
+def cria_crc(payload):
+    crc_calculator = CrcCalculator(Crc16.CCITT)
+    check = crc_calculator.calculate_checksum(payload)
+    return check
     
 def main():
     try:
