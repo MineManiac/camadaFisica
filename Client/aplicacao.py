@@ -227,7 +227,7 @@ def main():
             # Criando head e eop do pacote Handshake (sem payload ou payload = 0)
             tipo_mensagem = 1
             tamanho_bytes_total = 14
-            txBuffer_handshake = datagram_head(tipo_mensagem, total_pacotes, 0, 0, 0, 0) + datagram_eop()
+            txBuffer_handshake = datagram_head(tipo_mensagem, total_pacotes, 0, 0, 0, 0, 0) + datagram_eop()
             com1.sendData(txBuffer_handshake)
             timestamp = get_timestamp()
             novo_log = cria_log(timestamp, tipo_comunicacao_envio, tipo_mensagem, tamanho_bytes_total, 0, 0)
@@ -295,7 +295,8 @@ def main():
                 
             # HEAD - 10 bytes
             tipo_mensagem_com = 3
-            txBuffer_head = datagram_head(tipo_mensagem_com, total_pacotes, cont, tamanho_payload, 0, 0)
+            crc = cria_crc(txBuffer_payload)
+            txBuffer_head = datagram_head(tipo_mensagem_com, total_pacotes, cont, tamanho_payload, 0, 0, crc)
 
             # EOP - 4 bytes
             txBuffer_eop = datagram_eop()
@@ -388,7 +389,8 @@ def main():
                         
                     # HEAD - 10 bytes
                     tipo_mensagem = 3
-                    txBuffer_head = datagram_head(tipo_mensagem, total_pacotes, cont, tamanho_payload, 0, 0)
+                    crc = cria_crc(txBuffer_payload)
+                    txBuffer_head = datagram_head(tipo_mensagem, total_pacotes, cont, tamanho_payload, 0, 0, crc)
 
                     # EOP - 4 bytes
                     txBuffer_eop = datagram_eop()
