@@ -55,7 +55,7 @@ import datetime
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM3"                  # Windows(variacao de)
+serialName = "COM5"                  # Windows(variacao de)
 
 
 def decifra_head(head):
@@ -110,6 +110,7 @@ def datagram_eop():
     
     return eop
 
+
 def decifra_head(head):
     lista_head = list(head)
     
@@ -122,7 +123,11 @@ def decifra_head(head):
     # O lista_head[7], é o número do último pacote recebido com sucesso pelo Server
     ultimo_pacote = lista_head[7]
     # Os elementos de lista_head[8] e lista_head[9] são os CRC
-    crc = lista_head[8:10]
+    crc_bytes = b''
+    for i in lista_head[8:]:
+        crc_bytes += bytes([i])     
+        
+    crc = int.from_bytes(crc_bytes, byteorder='big')
     
     return(tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc)
 
@@ -169,7 +174,12 @@ def cria_log_file(lista_logs):
             
 def checa_crc(payload,crc):
     crc_calculator = CrcCalculator(Crc16.CCITT)
-    return(crc_calculator.verify_checksum(payload,crc))
+    checksum = crc_calculator.calculate_checksum(payload)
+    
+    if checksum == crc:
+        return True
+    else:
+        return False
 
 
 def main():
@@ -177,7 +187,7 @@ def main():
         
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace('COM3')
+        com1 = enlace('COM5')
         
         com1.rx.clearBuffer()
         time.sleep(0.01)
@@ -273,7 +283,7 @@ def main():
         timer2_inicio = time.perf_counter()
         
         #NAO PEGA DADOS TIMEOUT
-        time.sleep(23)
+        #time.sleep(23)
         
         #LOOP PEGANDO OS DADOS RECEBIDOS
         while cont <= numero_total_pacotes:            
