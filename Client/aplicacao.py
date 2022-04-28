@@ -292,8 +292,8 @@ def main():
             # HEAD - 10 bytes
             tipo_mensagem_com = 3
             crc = cria_crc(txBuffer_payload)
-            if cont == 4:
-                crc = 300
+            #if cont == 4:
+            #   crc = 300
             txBuffer_head = datagram_head(tipo_mensagem_com, total_pacotes, cont, tamanho_payload, 0, 0, crc)
 
             # EOP - 4 bytes
