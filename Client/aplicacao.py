@@ -52,9 +52,9 @@ from crc import CrcCalculator, Crc16
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM4"                  # Windows(variacao de)
+serialName = "COM3"                  # Windows(variacao de)
 
-def datagram_head(tipo, total_pacotes, n_pacote, tamanho_payload, pacote_erro, pacote_sucesso, crc):
+def datagram_head(tipo, total_pacotes, n_pacote, tamanho_payload, pacote_erro, pacote_sucesso, crc):    
     
     h0 = tipo.to_bytes(1, byteorder='big')#tipo mensagem
     h1 = b'\x00'
@@ -65,8 +65,6 @@ def datagram_head(tipo, total_pacotes, n_pacote, tamanho_payload, pacote_erro, p
     h6 = pacote_erro.to_bytes(1,byteorder='big')#pacote solicitado para reenvio caso erro
     h7 = pacote_sucesso.to_bytes(1,byteorder='big')
     h8h9 = crc.to_bytes(2,byteorder='big')
-    
-    
     
     head = h0 + h1 + h2 + h3 + h4 + h5 + h6 + h7 + h8h9
    
@@ -100,10 +98,8 @@ def decifra_head(head):
         # O lista_head[7], é o número do último pacote recebido com sucesso pelo Server
         ultimo_pacote = lista_head[7]
         # Os elementos de lista_head[8] e lista_head[9] são os CRC
-        crc_bytes = b''
-        for i in lista_head[8:]:
-            crc_bytes += bytes([i])     
-            
+        crc_bytes = bytes([lista_head[8]]) + bytes([lista_head[9]])
+        
         crc = int.from_bytes(crc_bytes, byteorder='big')
         
         return(tipo_mensagem, numero_total_pacotes, numero_pacote, tamanho_payload, pacote_solicitado, ultimo_pacote, crc)
@@ -296,6 +292,8 @@ def main():
             # HEAD - 10 bytes
             tipo_mensagem_com = 3
             crc = cria_crc(txBuffer_payload)
+            if cont == 4:
+                crc = 300
             txBuffer_head = datagram_head(tipo_mensagem_com, total_pacotes, cont, tamanho_payload, 0, 0, crc)
 
             # EOP - 4 bytes
@@ -389,7 +387,7 @@ def main():
                         
                     # HEAD - 10 bytes
                     tipo_mensagem = 3
-                    crc = cria_crc(txBuffer_payload)
+                    crc = cria_crc(txBuffer_payload)                    
                     txBuffer_head = datagram_head(tipo_mensagem, total_pacotes, cont, tamanho_payload, 0, 0, crc)
 
                     # EOP - 4 bytes
