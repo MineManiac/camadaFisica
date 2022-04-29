@@ -12,38 +12,39 @@
 void setup() {
   Serial.begin(9600);
   pinMode(8, OUTPUT);    // sets the digital pin 8 as output
-
-  
 }
 
 // 01100001
 void loop() {
   // put your main code here, to run repeatedly:
-  digitalWrite(8,LOW)
-  
-  digitalWrite(8,HIGH)
-  
-  digitalWrite(8,HIGH)
-  
-  digitalWrite(8,LOW)
-  
-  digitalWrite(8,LOW)
-  
-  digitalWrite(8,LOW)
-  
-  digitalWrite(8,LOW)
-  
-  digitalWrite(8,HIGH)
+  delay(1000);
+  digitalWrite(8, LOW);
+  _sw_uart_wait_T();
+  digitalWrite(8,HIGH);
+  _sw_uart_wait_T();
+  digitalWrite(8,LOW);
+  _sw_uart_wait_T();
+  digitalWrite(8,LOW);
+  _sw_uart_wait_T();
+  digitalWrite(8,LOW);
+  _sw_uart_wait_T();
+  digitalWrite(8,LOW);
+  _sw_uart_wait_T();
+  digitalWrite(8,HIGH);
+  _sw_uart_wait_T();
+  digitalWrite(8,HIGH);
+  _sw_uart_wait_T();
+  digitalWrite(8,LOW);
+  _sw_uart_wait_T();
+  digitalWrite(8,HIGH);
+  _sw_uart_wait_T();
+  digitalWrite(8,HIGH);
+  _sw_uart_wait_T();
 }
 
 
 // MCK 21MHz
-void _sw_uart_wait_half_T(due_sw_uart *uart) {
-  for(int i = 0; i < 1093; i++)
+void _sw_uart_wait_T() {
+  for(int i = 0; i < 2187; i++)
     asm("NOP");
-}
-
-void _sw_uart_wait_T(due_sw_uart *uart) {
-  _sw_uart_wait_half_T(uart);
-  _sw_uart_wait_half_T(uart);
 }
