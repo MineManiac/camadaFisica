@@ -8,7 +8,7 @@ struct due_sw_uart {
 	int baudrate;
 	int stopbits;
 	int paritybit;
-  int databits;
+  	int databits;
 };
 
 typedef struct due_sw_uart due_sw_uart;
