@@ -18,9 +18,9 @@ def main():
     #voce importou a bilioteca sounddevice como, por exemplo, sd. entao
     # os seguintes parametros devem ser setados:
     
-    sd.default.samplerate = #taxa de amostragem
+    sd.default.samplerate = 44100 #taxa de amostragem
     sd.default.channels = 2  #voce pode ter que alterar isso dependendo da sua placa
-    duration = #tempo em segundos que ira aquisitar o sinal acustico captado pelo mic
+    duration = 2 #tempo em segundos que ira aquisitar o sinal acustico captado pelo mic
 
 
     # faca um printo na tela dizendo que a captacao comecará em n segundos. e entao 

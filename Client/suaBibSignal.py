@@ -11,10 +11,8 @@ class signalMeu:
     def __init__(self):
         self.init = 0
 
-    def __init__(self):
-        self.init = 0
-
     def generateSin(self, freq, amplitude, time, fs):
+        # fs é a frequência de amostragem
         n = time*fs
         x = np.linspace(0.0, time, n)
         s = amplitude*np.sin(freq*x*2*np.pi)

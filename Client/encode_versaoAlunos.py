@@ -15,9 +15,6 @@ def todB(s):
     sdB = 10*np.log10(s)
     return(sdB)
 
-
-
-
 def main():
     
    
@@ -37,8 +34,36 @@ def main():
     
 
     print("Inicializando encoder")
+    sig = signalMeu()
+    
     print("Aguardando usuário")
+    lista_teclas = []
+    for i in range(4):
+        tecla_pressionada = input(f"Qual a {i}° tecla? (Escolha valores de 1 à 9) ")
+        lista_teclas.append(tecla_pressionada)
+    
     print("Gerando Tons base")
+    # Criando dicionário que relaciona teclas de 0 à 9 à listas com duas frequências (em Hertz) cada, referentes à tabela
+    tecla_para_frequencias = {
+        "0": [941, 1339],
+        "1": [697, 1206],
+        "2": [697, 1339],
+        "3": [697, 1477],
+        "4": [770, 1206],
+        "5": [770, 1339],
+        "6": [770, 1477],
+        "7": [852, 1206],
+        "8": [852, 1339],
+        "9": [852, 1477]
+        }
+    # Vai selecionar cada uma das teclas no dicionário e obter as frequências que compõem os sinais a serem enviados
+    lista_sinais = []
+    for i in range(4):
+        tecla = lista_teclas[i]
+        frequencias = tecla_para_frequencias[tecla]
+        
+    
+    
     print("Executando as senoides (emitindo o som)")
     print("Gerando Tom referente ao símbolo : {}".format(NUM))
     sd.play(tone, fs)
