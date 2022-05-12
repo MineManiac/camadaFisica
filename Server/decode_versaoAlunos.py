@@ -84,7 +84,10 @@ def main():
     plt.figure("A(t)")
     plt.plot(t,audio)
     plt.grid()
+    plt.xlabel("tempo")
+    plt.ylabel("áudio")
     plt.title('Audio no Tempo')
+    plt.savefig('audio.png')
     
     
     ## Calcula e exibe o Fourier do sinal audio. como saida tem-se a amplitude e as frequencias
@@ -92,7 +95,10 @@ def main():
     plt.figure("F(y)")
     plt.plot(xf,yf)
     plt.grid()
+    plt.xlabel("amplitude")
+    plt.ylabel("indice")
     plt.title('Fourier audio')
+    plt.savefig('fourier.png')
     
 
     #esta funcao analisa o fourier e encontra os picos
