@@ -27,8 +27,25 @@ class signalMeu:
         yf = fft(signal*W)
         return(xf, np.abs(yf[0:N//2]))
 
-    def plotFFT(self, signal, fs):
+    def plotFFT(self, signal, fs, tecla_pressionada):
         x,y = self.calcFFT(signal, fs)
-        plt.figure()
+        plt.figure("Fourier")
         plt.plot(x, np.abs(y))
-        plt.title('Fourier')
+        plt.title(f"Fourier (tecla {tecla_pressionada})")
+        plt.grid()
+        plt.xlabel("Frequência (Hz)")
+        plt.ylabel("Magnitude")
+        # Magnitude é a intensidade do som 
+        plt.savefig("Fourier.png")
+        plt.show()
+        
+    def plotSinais(self, signal, x_axis, tecla_pressionada):
+        plt.figure("Sinais Somados")
+        plt.plot(x_axis, signal)
+        plt.title(f"Sinais Somados (tecla {tecla_pressionada})")
+        plt.grid()
+        plt.xlabel("Tempo (s)")
+        plt.ylabel("Amplitude")
+        plt.xlim(0,0.02)
+        plt.savefig("SinaisSomados.png")
+        plt.show()

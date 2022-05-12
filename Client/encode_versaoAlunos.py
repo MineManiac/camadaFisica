@@ -4,6 +4,8 @@ from suaBibSignal import *
 import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
+from time import sleep
+
 
 #funções a serem utilizadas
 def signal_handler(signal, frame):
@@ -32,15 +34,20 @@ def main():
     
     # construa o gráfico do sinal emitido e o gráfico da transformada de Fourier. Cuidado. Como as frequencias sao relativamente altas, voce deve plotar apenas alguns pontos (alguns periodos) para conseguirmos ver o sinal
     
-
-    print("Inicializando encoder")
-    sig = signalMeu()
     
-    print("Aguardando usuário")
-    lista_teclas = []
-    for i in range(4):
-        tecla_pressionada = input(f"Qual a {i}° tecla? (Escolha valores de 1 à 9) ")
-        lista_teclas.append(tecla_pressionada)
+    print("Inicializando encoder")
+    signal = signalMeu()
+    # Amplitude do sinal
+    amplitude = 1
+    # Tempo de duração do sinal em segundos
+    time = 5
+    # Sample rate padrão
+    fs = 44100
+    # Você importou a bilioteca sounddevice como sd. 
+    # Então os seguintes parâmetros devem ser setados:
+    sd.default.samplerate = fs # Taxa de amostragem
+    sd.default.channels = 2  # Você pode ter que alterar isso dependendo da sua placa
+    #sd.default.device = 'digital output'
     
     print("Gerando Tons base")
     # Criando dicionário que relaciona teclas de 0 à 9 à listas com duas frequências (em Hertz) cada, referentes à tabela
@@ -56,22 +63,42 @@ def main():
         "8": [852, 1339],
         "9": [852, 1477]
         }
-    # Vai selecionar cada uma das teclas no dicionário e obter as frequências que compõem os sinais a serem enviados
-    lista_sinais = []
-    for i in range(4):
-        tecla = lista_teclas[i]
-        frequencias = tecla_para_frequencias[tecla]
+    
+    tocar = True
+    while tocar:
         
-    
-    
-    print("Executando as senoides (emitindo o som)")
-    print("Gerando Tom referente ao símbolo : {}".format(NUM))
-    sd.play(tone, fs)
-    # Exibe gráficos
-    plt.show()
-    # aguarda fim do audio
-    sd.wait()
-    plotFFT(self, signal, fs)
+        print("Aguardando usuário")
+        tecla_pressionada = input(f"Qual tecla deseja tocar? (Escolha valores de 1 à 9) ")
+        #tecla_pressionada = "1"
+        if tecla_pressionada == "10":
+            tocar = False
+            # Dá pra tentar colocar um sys.exit() ou semelhante...
+            # Mas como tá funfando bunitinho, deixa do jeito que tá e dane-se
+            
+        else:
+            # Vai selecionar a tecla no dicionário, obter as frequências 
+            # que compõem o sinal a ser enviado e somar as senoides de cada frequência
+            # para obter o tom que será tocado
+        
+            frequencias = tecla_para_frequencias[tecla_pressionada]
+            x, seno1 = signal.generateSin(frequencias[0], amplitude, time, fs)
+            x, seno2 = signal.generateSin(frequencias[1], amplitude, time, fs)
+            sinal = seno1 + seno2                
+            
+            print(f"Executando as senoides (emitindo o som referente à tecla {tecla_pressionada})")
+            # Toca áudio
+            sd.play(sinal, fs)
+            
+            # Aguarda fim do áudio
+            sd.wait()
+            
+            # Exibe gráficos do sinal das senóides somadas e da transformada de fourier
+            
+            # Plot sinal
+            signal.plotSinais(sinal, x, tecla_pressionada)
+            
+            # Plot Fourier
+            signal.plotFFT(sinal, fs, tecla_pressionada)
     
 
 if __name__ == "__main__":
