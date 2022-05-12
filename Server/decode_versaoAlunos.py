@@ -79,26 +79,9 @@ def main():
     fim = 5
     
     t = np.linspace(inicio,fim,numPontos)
-
-    # plot do grafico  áudio vs tempo!   
-    plt.figure("A(t)")
-    plt.plot(t,audio)
-    plt.grid()
-    plt.xlabel("tempo")
-    plt.ylabel("áudio")
-    plt.title('Audio no Tempo')
-    plt.savefig('audio.png')
-    
-    
-    ## Calcula e exibe o Fourier do sinal audio. como saida tem-se a amplitude e as frequencias
+ 
+    ## Calcula Fourier do sinal audio. como saida tem-se a amplitude e as frequencias
     xf, yf = signal.calcFFT(dados, freqDeAmostragem)
-    plt.figure("F(y)")
-    plt.plot(xf,yf)
-    plt.grid()
-    plt.xlabel("amplitude")
-    plt.ylabel("indice")
-    plt.title('Fourier audio')
-    plt.savefig('fourier.png')
     
 
     #esta funcao analisa o fourier e encontra os picos
@@ -138,9 +121,27 @@ def main():
     
     for i in tecla_para_frequencias.keys():
         if tecla_para_frequencias[i] == frequencias:
-            print(i)
+            tecla = i
+            print(tecla)
         
+    # plot do grafico  áudio vs tempo!   
+    plt.figure("A(t)")
+    plt.plot(t,audio)
+    plt.grid()
+    plt.xlabel("Tempo")
+    plt.ylabel("Áudio")
+    plt.title('Audio no Tempo (tecla {})'.format(tecla))
+    plt.savefig('audio.png')
     
+    
+    ## Exibe o Fourier do sinal audio. como saida tem-se a amplitude e as frequencias
+    plt.figure("F(y)")
+    plt.plot(xf,yf)
+    plt.grid()
+    plt.ylabel("Amplitude")
+    plt.xlabel("Frequência(Hz)")
+    plt.title('Fourier Audio (tecla {})'.format(tecla))
+    plt.savefig('fourier.png')
     
 
     
