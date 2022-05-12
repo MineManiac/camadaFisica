@@ -7,6 +7,7 @@ import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
 import time
+import peakutils
 
 #funcao para transformas intensidade acustica em dB
 def todB(s):
@@ -79,15 +80,19 @@ def main():
     
     t = np.linspace(inicio,fim,numPontos)
 
-    # plot do grafico  áudio vs tempo!
-   
+    # plot do grafico  áudio vs tempo!   
+    plt.figure("A(t)")
+    plt.plot(t,audio)
+    plt.grid()
+    plt.title('Audio no Tempo')
+    
     
     ## Calcula e exibe o Fourier do sinal audio. como saida tem-se a amplitude e as frequencias
-    '''xf, yf = signal.calcFFT(y, fs)
+    xf, yf = signal.calcFFT(dados, freqDeAmostragem)
     plt.figure("F(y)")
     plt.plot(xf,yf)
     plt.grid()
-    plt.title('Fourier audio')'''
+    plt.title('Fourier audio')
     
 
     #esta funcao analisa o fourier e encontra os picos
@@ -95,12 +100,43 @@ def main():
     #voce deve tambem evitar que dois picos proximos sejam identificados, pois pequenas variacoes na
     #frequencia do sinal podem gerar mais de um pico, e na verdade tempos apenas 1.
    
-    '''index = peakutils.indexes(,,)'''
+    index = peakutils.indexes(yf, thres=0.25, min_dist=500)
     
-    #printe os picos encontrados! 
     
+    #printe os picos encontrados!
+    #print(index)
+    
+    frequencias = []
     #encontre na tabela duas frequencias proximas às frequencias de pico encontradas e descubra qual foi a tecla
+    for i in index:
+        frequencia = int(xf[i])
+        frequencias.append(frequencia)
+        
+        print("frequencia = {}".format(int(xf[i])))
+    
+    #print(frequencias)
+    
     #print a tecla.
+    tecla_para_frequencias = {
+        "0": [941, 1339],
+        "1": [697, 1206],
+        "2": [697, 1339],
+        "3": [697, 1477],
+        "4": [770, 1206],
+        "5": [770, 1339],
+        "6": [770, 1477],
+        "7": [852, 1206],
+        "8": [852, 1339],
+        "9": [852, 1477]
+        }
+    
+    for i in tecla_para_frequencias.keys():
+        if tecla_para_frequencias[i] == frequencias:
+            print(i)
+        
+    
+    
+
     
   
     ## Exibe gráficos
