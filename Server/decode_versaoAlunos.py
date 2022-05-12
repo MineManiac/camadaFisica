@@ -134,6 +134,7 @@ def main():
     plt.savefig('audio.png')
     
     
+    
     ## Exibe o Fourier do sinal audio. como saida tem-se a amplitude e as frequencias
     plt.figure("F(y)")
     plt.plot(xf,yf)
@@ -143,9 +144,7 @@ def main():
     plt.title('Fourier Audio (tecla {})'.format(tecla))
     plt.savefig('fourier.png')
     
-
     
-  
     ## Exibe gráficos
     plt.show()
 
