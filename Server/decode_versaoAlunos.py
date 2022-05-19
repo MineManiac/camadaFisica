@@ -119,6 +119,9 @@ def main():
         "9": [852, 1477]
         }
     
+
+    tecla = 0
+    
     for i in tecla_para_frequencias.keys():
         if tecla_para_frequencias[i] == frequencias:
             tecla = i
@@ -131,7 +134,7 @@ def main():
     plt.xlabel("Tempo")
     plt.ylabel("Áudio")
     plt.title('Audio no Tempo (tecla {})'.format(tecla))
-    plt.savefig('audio.png')
+    # plt.savefig('audio.png')
     
     
     
@@ -142,7 +145,7 @@ def main():
     plt.ylabel("Amplitude")
     plt.xlabel("Frequência(Hz)")
     plt.title('Fourier Audio (tecla {})'.format(tecla))
-    plt.savefig('fourier.png')
+    # plt.savefig('fourier.png')
     
     
     ## Exibe gráficos

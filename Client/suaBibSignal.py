@@ -36,7 +36,7 @@ class signalMeu:
         plt.xlabel("Frequência (Hz)")
         plt.ylabel("Magnitude")
         # Magnitude é a intensidade do som 
-        plt.savefig("Fourier.png")
+        #plt.savefig("Fourier.png")
         plt.show()
         
     def plotSinais(self, signal, x_axis, tecla_pressionada):
@@ -47,5 +47,5 @@ class signalMeu:
         plt.xlabel("Tempo (s)")
         plt.ylabel("Amplitude")
         plt.xlim(0,0.02)
-        plt.savefig("SinaisSomados.png")
+        #plt.savefig("SinaisSomados.png")
         plt.show()
