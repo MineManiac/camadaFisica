@@ -1,21 +1,10 @@
 
 #importe as bibliotecas
-from suaBibSignal import *
+from suaBibSignal import signalMeu
 import numpy as np
 import sounddevice as sd
-import matplotlib.pyplot as plt
-from time import sleep
+import soundfile as sf
 
-
-#funções a serem utilizadas
-def signal_handler(signal, frame):
-        print('You pressed Ctrl+C!')
-        sys.exit(0)
-
-#converte intensidade em Db, caso queiram ...
-def todB(s):
-    sdB = 10*np.log10(s)
-    return(sdB)
 
 def main():
     
@@ -36,70 +25,65 @@ def main():
     
     
     print("Inicializando encoder")
-    signal = signalMeu()
+    meu_sinal = signalMeu()
+    
+    # Pegando áudio que será transmitido
+    data, samplerate = sf.read("RickRoll.wav")
+    # Quantidade de pontos
+    n = len(data)
     # Amplitude do sinal
     amplitude = 1
     # Tempo de duração do sinal em segundos
-    time = 5
-    # Sample rate padrão
-    fs = 44100
+    time = len(data)/samplerate
     # Você importou a bilioteca sounddevice como sd. 
     # Então os seguintes parâmetros devem ser setados:
-    sd.default.samplerate = fs # Taxa de amostragem
+    sd.default.samplerate = samplerate # Taxa de amostragem
     sd.default.channels = 2  # Você pode ter que alterar isso dependendo da sua placa
     #sd.default.device = 'digital output'
     
-    print("Gerando Tons base")
-    # Criando dicionário que relaciona teclas de 0 à 9 à listas com duas frequências (em Hertz) cada, referentes à tabela
-    tecla_para_frequencias = {
-        "0": [941, 1339],
-        "1": [697, 1206],
-        "2": [697, 1339],
-        "3": [697, 1477],
-        "4": [770, 1206],
-        "5": [770, 1339],
-        "6": [770, 1477],
-        "7": [852, 1206],
-        "8": [852, 1339],
-        "9": [852, 1477]
-        }
+    # Dados do eixo x (tempo) para plotagem de gráficos
+    t = np.linspace(0, time, n)
     
-    tocar = True
-    while tocar:
-        
-        print("Aguardando usuário")
-        tecla_pressionada = input(f"Qual tecla deseja tocar? (Escolha valores de 1 à 9) ")
-        #tecla_pressionada = "1"
-        if tecla_pressionada == "10":
-            tocar = False
-            # Dá pra tentar colocar um sys.exit() ou semelhante...
-            # Mas como tá funfando bunitinho, deixa do jeito que tá e dane-se
-            
-        else:
-            # Vai selecionar a tecla no dicionário, obter as frequências 
-            # que compõem o sinal a ser enviado e somar as senoides de cada frequência
-            # para obter o tom que será tocado
-        
-            frequencias = tecla_para_frequencias[tecla_pressionada]
-            x, seno1 = signal.generateSin(frequencias[0], amplitude, time, fs)
-            x, seno2 = signal.generateSin(frequencias[1], amplitude, time, fs)
-            sinal = seno1 + seno2                
-            
-            print(f"Executando as senoides (emitindo o som referente à tecla {tecla_pressionada})")
-            # Toca áudio
-            sd.play(sinal, fs)
-            
-            # Aguarda fim do áudio
-            sd.wait()
-            
-            # Exibe gráficos do sinal das senóides somadas e da transformada de fourier
-            
-            # Plot sinal
-            signal.plotSinais(sinal, x, tecla_pressionada)
-            
-            # Plot Fourier
-            signal.plotFFT(sinal, fs, tecla_pressionada)
+    # Gráfico 1: sinal do áudio original - domínio do tempo
+    meu_sinal.plotSinal(data, t, "Gráfico 1")
     
+    data_filtrada = meu_sinal.LPF(data, 2500, samplerate)
+    
+    # Trava o programa para tocar na hora certa
+    _ = input("Pressione Enter para tocar o áudio filtrado: ")
+    
+    sd.play(data_filtrada, samplerate)
+    sd.wait()
+    
+    # Gráfico 2: Sinal de áudio filtrado - domínio do tempo
+    meu_sinal.plotSinal(data_filtrada, t, "Gráfico 2")
+    
+    # Gráfico 3: Sinal do áudio filtrado - domínio da frequência
+    meu_sinal.plotFFT(data_filtrada, samplerate, "Gráfico 3")
+    
+    portadora = meu_sinal.generateSin(13000, amplitude, t, samplerate)
+    
+    modulado = np.array(data_filtrada) * np.array(portadora)
+    
+    # Gráfico 4: sinal de áudio modulado - domínio do tempo
+    meu_sinal.plotSinal(modulado, t, "Gráfico 4")
+    
+    # Gráfico 5: sinal de áudio modulado - domínio da frequência
+    meu_sinal.plotFFT(modulado, samplerate, "Gráfico 5")
+    
+    maximo = 0
+    for p in modulado:
+        p_modulo = abs(p)
+        if p_modulo > maximo:
+            maximo = p_modulo
+            
+    normalizado = modulado/maximo
+    
+    # Trava o programa para tocar na hora certa
+    _ = input("Pressione Enter para tocar o áudio modulado: ")
+    
+    sd.play(normalizado, samplerate)
+    sd.wait()
 
 if __name__ == "__main__":
     main()
