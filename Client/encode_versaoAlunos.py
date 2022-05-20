@@ -52,7 +52,7 @@ def main():
 # =============================================================================
 # Descomente para avaliação do professor
 #     # Trava o programa para tocar na hora certa
-#     _ = input("Pressione Enter para tocar o áudio filtrado: ")
+#     input("Pressione Enter para tocar o áudio filtrado: ")
 #     
 #     sd.play(data_filtrada, samplerate)
 #     sd.wait()
@@ -74,19 +74,16 @@ def main():
     # Gráfico 5: sinal de áudio modulado - domínio da frequência
     meu_sinal.plotFFT(modulado, samplerate, "Gráfico 5")
     
-    maximo = 0
-    for p in modulado:
-        p_modulo = abs(p)
-        if p_modulo > maximo:
-            maximo = p_modulo
+    maximo = max(abs(modulado))
             
     normalizado = modulado/maximo
     
     # Trava o programa para tocar na hora certa
-    _ = input("Pressione Enter para tocar o áudio modulado: ")
+    input("Pressione Enter para tocar o áudio modulado: ")
     
     sd.play(normalizado, samplerate)
     sd.wait()
+    
 
 if __name__ == "__main__":
     main()
