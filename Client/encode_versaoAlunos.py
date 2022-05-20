@@ -49,11 +49,14 @@ def main():
     
     data_filtrada = meu_sinal.LPF(data, 2500, samplerate)
     
-    # Trava o programa para tocar na hora certa
-    _ = input("Pressione Enter para tocar o áudio filtrado: ")
-    
-    sd.play(data_filtrada, samplerate)
-    sd.wait()
+# =============================================================================
+# Descomente para avaliação do professor
+#     # Trava o programa para tocar na hora certa
+#     _ = input("Pressione Enter para tocar o áudio filtrado: ")
+#     
+#     sd.play(data_filtrada, samplerate)
+#     sd.wait()
+# =============================================================================
     
     # Gráfico 2: Sinal de áudio filtrado - domínio do tempo
     meu_sinal.plotSinal(data_filtrada, t, "Gráfico 2")
