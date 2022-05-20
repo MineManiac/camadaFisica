@@ -8,7 +8,8 @@ import sounddevice as sd
 import matplotlib.pyplot as plt
 import time
 import peakutils
-import LPF from funcoes_LPF
+from funcoes_LPF import LPF
+import time
 
 #funcao para transformas intensidade acustica em dB
 def todB(s):
@@ -17,7 +18,7 @@ def todB(s):
 
 def generateCarrier(freq, amplitude, x, fs):
     s = amplitude*np.sin(freq*x*2*np.pi)
-    return (x, s)
+    return s
 
 def main():
     #declare um objeto da classe da sua biblioteca de apoio (cedida)    
@@ -65,6 +66,8 @@ def main():
     
     audio = sd.rec(int(numAmostras), freqDeAmostragem, channels=1)
     sd.wait()
+    
+    time.sleep(3)
     print("...     FIM")
     
     #analise sua variavel "audio". pode ser um vetor com 1 ou 2 colunas, lista ...
@@ -95,11 +98,14 @@ def main():
     plt.title('Fourier Audio Recebido')
     plt.savefig('fourierAudio.png')
 
-    carrier = generateCarrier(13000,1,duration, freqDeAmostragem)
-    
+    print("tocando audio")
+    sd.play(dados, freqDeAmostragem)
     
     #CALCULO DEMODULADO
+    carrier = generateCarrier(13000,1,duration, freqDeAmostragem)
+    
     demodulado = np.array(dados) * np.array(carrier)
+    
     xf, yf = signal.calcFFT(demodulado, freqDeAmostragem)
     
     ## Exibe o Fourier do sinal Demodulado. como saida tem-se a amplitude e as frequencias
@@ -116,7 +122,8 @@ def main():
     filtrado = LPF(demodulado, 2500, freqDeAmostragem)
     xf, yf = signal.calcFFT(filtrado, freqDeAmostragem)
     
-    sd.play(demodulado)
+    print("tocando modulado")
+    sd.play(demodulado, freqDeAmostragem)
     
     
     ## Exibe o Fourier do sinal audio Filtrado. como saida tem-se a amplitude e as frequencias
@@ -128,23 +135,8 @@ def main():
     plt.title('Fourier Audio Filtrado')
     plt.savefig('fourierFiltrado.png')
     
-    sd.play(filtrado)
-    
-        
-    # plot do grafico  áudio vs tempo!   
-# =============================================================================
-#     plt.figure("A(t)")
-#     plt.plot(t,audio)
-#     plt.grid()
-#     plt.xlabel("Tempo")
-#     plt.ylabel("Áudio")
-#     plt.title('Audio no Tempo (tecla {})'.format(tecla))
-# =============================================================================
-    # plt.savefig('audio.png')
-    
-    
-    
-
+    print("tocando audio")
+    sd.play(filtrado, freqDeAmostragem)
     
     
     ## Exibe gráficos
