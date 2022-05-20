@@ -10,6 +10,7 @@ import time
 import peakutils
 from funcoes_LPF import LPF
 import time
+import soundfile as sf
 
 #funcao para transformas intensidade acustica em dB
 def todB(s):
@@ -34,48 +35,14 @@ def main():
     sd.default.channels = 2  #voce pode ter que alterar isso dependendo da sua placa
    
 
-    # faca um print na tela dizendo que a captacao comecará em n segundos. e entao 
-    #use um time.sleep para a espera
-    print("-"*10)
-    print("A CAPTAÇÃO COMEÇARÁ EM 5")
-    print("-"*10)
-    time.sleep(1)
-    print("4")
-    print("-"*10)
-    time.sleep(1)
-    print("3")
-    print("-"*10)
-    time.sleep(1)
-    print("2")
-    print("-"*10)
-    time.sleep(1)
-    print("1")
-    print("-"*10)
-    time.sleep(1)
-   
-   #faca um print informando que a gravacao foi inicializada
-    print("A gravação foi iniciada")
-    print("-"*10)
-    
-   #declare uma variavel "duracao" com a duracao em segundos da gravacao. poucos segundos ... 
-   #calcule o numero de amostras "numAmostras" que serao feitas (numero de aquisicoes)
-   
     duration = 168729/freqDeAmostragem #tempo em segundos que ira aquisitar o sinal acustico captado pelo mic
-    numAmostras = freqDeAmostragem * duration
-    
-    
-    audio = sd.rec(int(numAmostras), freqDeAmostragem, channels=1)
-    sd.wait()
-    
-    time.sleep(3)
-    print("...     FIM")
+    #numAmostras = freqDeAmostragem * duration
     
     #analise sua variavel "audio". pode ser um vetor com 1 ou 2 colunas, lista ...
     #grave uma variavel com apenas a parte que interessa (dados)
-    dados = []
-    
-    for i in audio:
-        dados.append(i[0])
+
+
+    dados, _ = sf.read("nevergonna.wav")
         
     
 
@@ -94,13 +61,13 @@ def main():
     xf, yf = signal.calcFFT(demodulado, freqDeAmostragem)
     
     ## Exibe o Fourier do sinal Demodulado. como saida tem-se a amplitude e as frequencias
-    plt.figure("Fourier Audio Demodulado Gravado")
+    plt.figure("Fourier Audio Demodulado Arquivo")
     plt.plot(xf,yf)
     plt.grid()
     plt.ylabel("Amplitude")
     plt.xlabel("Frequência(Hz)")
     plt.title('Fourier Audio Demodulado')
-    plt.savefig('fourierDemoduladoGravado.png')
+    plt.savefig('fourierDemoduladoArquivo.png')
     
     LPF(demodulado, 2500, freqDeAmostragem)
     
@@ -110,13 +77,13 @@ def main():
     
 
     ## Exibe o Fourier do sinal audio Filtrado. como saida tem-se a amplitude e as frequencias
-    plt.figure("Fourier Audio Filtrado Gravado")
+    plt.figure("Fourier Audio Filtrado Arquivo")
     plt.plot(xf,yf)
     plt.grid()
     plt.ylabel("Amplitude")
     plt.xlabel("Frequência(Hz)")
     plt.title('Fourier Audio Filtrado')
-    plt.savefig('fourierFiltradoGravado.png')
+    plt.savefig('fourierFiltradoArquivo.png')
     
     print("tocando audio")
     sd.play(filtrado, freqDeAmostragem)
