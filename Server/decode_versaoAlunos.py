@@ -33,7 +33,6 @@ def main():
     sd.default.channels = 2  #voce pode ter que alterar isso dependendo da sua placa
    
 
-
     # faca um print na tela dizendo que a captacao comecará em n segundos. e entao 
     #use um time.sleep para a espera
     print("-"*10)
