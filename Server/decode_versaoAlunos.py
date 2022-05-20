@@ -8,12 +8,16 @@ import sounddevice as sd
 import matplotlib.pyplot as plt
 import time
 import peakutils
+import LPF from funcoes_LPF
 
 #funcao para transformas intensidade acustica em dB
 def todB(s):
     sdB = 10*np.log10(s)
     return(sdB)
 
+def generateCarrier(freq, amplitude, x, fs):
+    s = amplitude*np.sin(freq*x*2*np.pi)
+    return (x, s)
 
 def main():
     #declare um objeto da classe da sua biblioteca de apoio (cedida)    
@@ -56,7 +60,7 @@ def main():
    #declare uma variavel "duracao" com a duracao em segundos da gravacao. poucos segundos ... 
    #calcule o numero de amostras "numAmostras" que serao feitas (numero de aquisicoes)
    
-    duration = 5 #tempo em segundos que ira aquisitar o sinal acustico captado pelo mic
+    duration = 168729/freqDeAmostragem #tempo em segundos que ira aquisitar o sinal acustico captado pelo mic
     numAmostras = freqDeAmostragem * duration
     
     
@@ -76,76 +80,72 @@ def main():
     # use a funcao linspace e crie o vetor tempo. Um instante correspondente a cada amostra!
     numPontos = len(dados)
     inicio = 0
-    fim = 5
+    fim = duration
     
     t = np.linspace(inicio,fim,numPontos)
  
     ## Calcula Fourier do sinal audio. como saida tem-se a amplitude e as frequencias
     xf, yf = signal.calcFFT(dados, freqDeAmostragem)
     
-
-    #esta funcao analisa o fourier e encontra os picos
-    #voce deve aprender a usa-la. ha como ajustar a sensibilidade, ou seja, o que é um pico?
-    #voce deve tambem evitar que dois picos proximos sejam identificados, pois pequenas variacoes na
-    #frequencia do sinal podem gerar mais de um pico, e na verdade tempos apenas 1.
-   
-    index = peakutils.indexes(yf, thres=0.25, min_dist=500)
-    
-    
-    #printe os picos encontrados!
-    #print(index)
-    
-    frequencias = []
-    #encontre na tabela duas frequencias proximas às frequencias de pico encontradas e descubra qual foi a tecla
-    for i in index:
-        frequencia = int(xf[i])
-        frequencias.append(frequencia)
-        
-        print("frequencia = {}".format(int(xf[i])))
-    
-    #print(frequencias)
-    
-    #print a tecla.
-    tecla_para_frequencias = {
-        "0": [941, 1339],
-        "1": [697, 1206],
-        "2": [697, 1339],
-        "3": [697, 1477],
-        "4": [770, 1206],
-        "5": [770, 1339],
-        "6": [770, 1477],
-        "7": [852, 1206],
-        "8": [852, 1339],
-        "9": [852, 1477]
-        }
-    
-
-    tecla = 0
-    
-    for i in tecla_para_frequencias.keys():
-        if tecla_para_frequencias[i] == frequencias:
-            tecla = i
-            print(tecla)
-        
-    # plot do grafico  áudio vs tempo!   
-    plt.figure("A(t)")
-    plt.plot(t,audio)
-    plt.grid()
-    plt.xlabel("Tempo")
-    plt.ylabel("Áudio")
-    plt.title('Audio no Tempo (tecla {})'.format(tecla))
-    # plt.savefig('audio.png')
-    
-    
-    
     ## Exibe o Fourier do sinal audio. como saida tem-se a amplitude e as frequencias
-    plt.figure("F(y)")
+    plt.figure("Fourier Audio Recebido")
     plt.plot(xf,yf)
     plt.grid()
     plt.ylabel("Amplitude")
     plt.xlabel("Frequência(Hz)")
-    plt.title('Fourier Audio (tecla {})'.format(tecla))
-    # plt.savefig('fourier.png')
+    plt.title('Fourier Audio Recebido')
+    plt.savefig('fourierAudio.png')
+
+    carrier = generateCarrier(13000,1,duration, freqDeAmostragem)
+    
+    
+    #CALCULO DEMODULADO
+    demodulado = np.array(dados) * np.array(carrier)
+    xf, yf = signal.calcFFT(demodulado, freqDeAmostragem)
+    
+    ## Exibe o Fourier do sinal Demodulado. como saida tem-se a amplitude e as frequencias
+    plt.figure("Fourier Audio Demodulado")
+    plt.plot(xf,yf)
+    plt.grid()
+    plt.ylabel("Amplitude")
+    plt.xlabel("Frequência(Hz)")
+    plt.title('Fourier Audio Demodulado')
+    plt.savefig('fourierDemodulado.png')
+    
+    
+    #CALCULO FILTRADO
+    filtrado = LPF(demodulado, 2500, freqDeAmostragem)
+    xf, yf = signal.calcFFT(filtrado, freqDeAmostragem)
+    
+    sd.play(demodulado)
+    
+    
+    ## Exibe o Fourier do sinal audio Filtrado. como saida tem-se a amplitude e as frequencias
+    plt.figure("Fourier Audio Filtrado")
+    plt.plot(xf,yf)
+    plt.grid()
+    plt.ylabel("Amplitude")
+    plt.xlabel("Frequência(Hz)")
+    plt.title('Fourier Audio Filtrado')
+    plt.savefig('fourierFiltrado.png')
+    
+    sd.play(filtrado)
+    
+        
+    # plot do grafico  áudio vs tempo!   
+# =============================================================================
+#     plt.figure("A(t)")
+#     plt.plot(t,audio)
+#     plt.grid()
+#     plt.xlabel("Tempo")
+#     plt.ylabel("Áudio")
+#     plt.title('Audio no Tempo (tecla {})'.format(tecla))
+# =============================================================================
+    # plt.savefig('audio.png')
+    
+    
+    
+
     
     
     ## Exibe gráficos
